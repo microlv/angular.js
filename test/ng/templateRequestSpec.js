@@ -16,22 +16,31 @@ describe('$templateRequest', function() {
     expect(content).toBe('<div>abc</div>');
   }));
 
-  it('should cache the request using $templateCache to prevent extra downloads',
-    inject(function($rootScope, $templateRequest, $templateCache) {
+  it('should cache the request to prevent extra downloads',
+    inject(function($rootScope, $templateRequest, $templateCache, $httpBackend) {
 
-    $templateCache.put('tpl.html', 'matias');
+    $httpBackend.expectGET('tpl.html').respond('matias');
 
-    var content;
-    $templateRequest('tpl.html').then(function(html) { content = html; });
+    var content = [];
+    function tplRequestCb(html) {
+      content.push(html);
+    }
 
+    $templateRequest('tpl.html').then(tplRequestCb);
+    $httpBackend.flush();
+
+    $templateRequest('tpl.html').then(tplRequestCb);
     $rootScope.$digest();
-    expect(content).toBe('matias');
+
+    expect(content[0]).toBe('matias');
+    expect(content[1]).toBe('matias');
+    expect($templateCache.get('tpl.html')).toBe('matias');
   }));
 
   it('should throw an error when the template is not found',
     inject(function($rootScope, $templateRequest, $httpBackend) {
 
-    $httpBackend.expectGET('tpl.html').respond(404);
+    $httpBackend.expectGET('tpl.html').respond(404, '', {}, 'Not found');
 
     $templateRequest('tpl.html');
 
@@ -40,10 +49,24 @@ describe('$templateRequest', function() {
     expect(function() {
       $rootScope.$digest();
       $httpBackend.flush();
-    }).toThrowMinErr('$compile', 'tpload', 'Failed to load template: tpl.html');
+    }).toThrowMinErr('$compile', 'tpload', 'Failed to load template: tpl.html (HTTP status: 404 Not found)');
   }));
 
-  it('should throw an error when the template is empty',
+  it('should not throw when the template is not found and ignoreRequestError is true',
+    inject(function($rootScope, $templateRequest, $httpBackend) {
+
+      $httpBackend.expectGET('tpl.html').respond(404);
+
+      var err;
+      $templateRequest('tpl.html', true).catch(function(reason) { err = reason; });
+
+      $rootScope.$digest();
+      $httpBackend.flush();
+
+      expect(err.status).toBe(404);
+  }));
+
+  it('should not throw an error when the template is empty',
     inject(function($rootScope, $templateRequest, $httpBackend) {
 
     $httpBackend.expectGET('tpl.html').respond('');
@@ -55,7 +78,7 @@ describe('$templateRequest', function() {
     expect(function() {
       $rootScope.$digest();
       $httpBackend.flush();
-    }).toThrowMinErr('$compile', 'tpload', 'Failed to load template: tpl.html');
+    }).not.toThrow();
   }));
 
   it('should keep track of how many requests are going on',
@@ -81,9 +104,53 @@ describe('$templateRequest', function() {
 
     try {
       $httpBackend.flush();
-    } catch(e) {}
+    } catch (e) {}
 
     expect($templateRequest.totalPendingRequests).toBe(0);
   }));
 
+  it('should not try to parse a response as JSON',
+    inject(function($templateRequest, $httpBackend) {
+      var spy = jasmine.createSpy('success');
+      $httpBackend.expectGET('a.html').respond('{{text}}', {
+        'Content-Type': 'application/json'
+      });
+      $templateRequest('a.html').then(spy);
+      $httpBackend.flush();
+      expect(spy).toHaveBeenCalledOnceWith('{{text}}');
+  }));
+
+  it('should use custom response transformers (array)', function() {
+    module(function($httpProvider) {
+      $httpProvider.defaults.transformResponse.push(function(data) {
+        return data + '!!';
+      });
+    });
+    inject(function($templateRequest, $httpBackend) {
+      var spy = jasmine.createSpy('success');
+      $httpBackend.expectGET('a.html').respond('{{text}}', {
+        'Content-Type': 'application/json'
+      });
+      $templateRequest('a.html').then(spy);
+      $httpBackend.flush();
+      expect(spy).toHaveBeenCalledOnceWith('{{text}}!!');
+    });
+  });
+
+  it('should use custom response transformers (function)', function() {
+    module(function($httpProvider) {
+      $httpProvider.defaults.transformResponse = function(data) {
+        return data + '!!';
+      };
+    });
+    inject(function($templateRequest, $httpBackend) {
+      var spy = jasmine.createSpy('success');
+      $httpBackend.expectGET('a.html').respond('{{text}}', {
+        'Content-Type': 'application/json'
+      });
+      $templateRequest('a.html').then(spy);
+      $httpBackend.flush();
+      expect(spy).toHaveBeenCalledOnceWith('{{text}}!!');
+    });
+  });
 });

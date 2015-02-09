@@ -12,10 +12,14 @@ describe('event directives', function() {
   describe('ngSubmit', function() {
 
     it('should get called on form submit', inject(function($rootScope, $compile) {
-      element = $compile('<form action="" ng-submit="submitted = true">' +
+      element = $compile('<form action="/foo" ng-submit="submitted = true">' +
         '<input type="submit"/>' +
         '</form>')($rootScope);
       $rootScope.$digest();
+
+      // prevent submit within the test harness
+      element.on('submit', function(e) { e.preventDefault(); });
+
       expect($rootScope.submitted).not.toBeDefined();
 
       browserTrigger(element.children()[0]);
@@ -29,10 +33,14 @@ describe('event directives', function() {
         }
       };
 
-      element = $compile('<form action="" ng-submit="formSubmission($event)">' +
+      element = $compile('<form action="/foo" ng-submit="formSubmission($event)">' +
         '<input type="submit"/>' +
         '</form>')($rootScope);
       $rootScope.$digest();
+
+      // prevent submit within the test harness
+      element.on('submit', function(e) { e.preventDefault(); });
+
       expect($rootScope.formSubmitted).not.toBeDefined();
 
       browserTrigger(element.children()[0]);
@@ -80,6 +88,25 @@ describe('event directives', function() {
       expect(element.val()).toBe('newValue');
     }));
 
+  });
+
+  describe('security', function() {
+    it('should allow access to the $event object', inject(function($rootScope, $compile) {
+      var scope = $rootScope.$new();
+      element = $compile('<button ng-click="e = $event">BTN</button>')(scope);
+      element.triggerHandler('click');
+      expect(scope.e.target).toBe(element[0]);
+    }));
+
+    it('should block access to DOM nodes (e.g. exposed via $event)', inject(function($rootScope, $compile) {
+      var scope = $rootScope.$new();
+      element = $compile('<button ng-click="e = $event.target">BTN</button>')(scope);
+      expect(function() {
+        element.triggerHandler('click');
+      }).toThrowMinErr(
+              '$parse', 'isecdom', 'Referencing DOM nodes in Angular expressions is disallowed! ' +
+              'Expression: e = $event.target');
+    }));
   });
 
   describe('blur', function() {

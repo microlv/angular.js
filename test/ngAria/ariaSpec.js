@@ -400,6 +400,16 @@ describe('$aria', function() {
     });
   });
 
+  describe('announcing ngMessages', function() {
+    beforeEach(injectScopeAndCompiler);
+
+    it('should attach aria-live', function() {
+      var element = [
+        $compile('<div ng-messages="myForm.myName.$error">')(scope)
+      ];
+      expectAriaAttrOnEachElement(element, 'aria-live', "assertive");
+    });
+  });
 
   describe('aria-value when disabled', function() {
     beforeEach(configAriaProvider({
@@ -471,6 +481,90 @@ describe('$aria', function() {
     });
   });
 
+  describe('accessible actions', function() {
+    beforeEach(injectScopeAndCompiler);
+
+    var clickFn;
+
+    it('should a trigger click from the keyboard', function() {
+      scope.someAction = function() {};
+
+      var elements = $compile('<section>' +
+                  '<div class="div-click" ng-click="someAction(\'div\')" tabindex="0"></div>' +
+                  '<ul><li ng-click="someAction( \'li\')" tabindex="0"></li></ul>' +
+                  '</section>')(scope);
+
+      scope.$digest();
+
+      clickFn = spyOn(scope, 'someAction');
+
+      var divElement = elements.find('div');
+      var liElement = elements.find('li');
+
+      divElement.triggerHandler({type: 'keypress', keyCode: 32});
+      liElement.triggerHandler({type: 'keypress', keyCode: 32});
+
+      expect(clickFn).toHaveBeenCalledWith('div');
+      expect(clickFn).toHaveBeenCalledWith('li');
+    });
+
+    it('should not override existing ng-keypress', function() {
+      scope.someOtherAction = function() {};
+      var keypressFn = spyOn(scope, 'someOtherAction');
+
+      scope.someAction = function() {};
+      clickFn = spyOn(scope, 'someAction');
+      compileInput('<div ng-click="someAction()" ng-keypress="someOtherAction()" tabindex="0"></div>');
+
+      element.triggerHandler({type: 'keypress', keyCode: 32});
+
+      expect(clickFn).not.toHaveBeenCalled();
+      expect(keypressFn).toHaveBeenCalled();
+    });
+
+    it('should update bindings when keypress handled', function() {
+      compileInput('<div ng-click="text = \'clicked!\'">{{text}}</div>');
+      expect(element.text()).toBe('');
+      spyOn(scope.$root, '$digest').andCallThrough();
+      element.triggerHandler({ type: 'keypress', keyCode: 13 });
+      expect(element.text()).toBe('clicked!');
+      expect(scope.$root.$digest).toHaveBeenCalledOnce();
+    });
+
+    it('should pass $event to ng-click handler as local', function() {
+      compileInput('<div ng-click="event = $event">{{event.type}}' +
+                   '{{event.keyCode}}</div>');
+      expect(element.text()).toBe('');
+      element.triggerHandler({ type: 'keypress', keyCode: 13 });
+      expect(element.text()).toBe('keypress13');
+    });
+
+    it('should not bind keypress to elements not in the default config', function() {
+      compileInput('<button ng-click="event = $event">{{event.type}}{{event.keyCode}}</button>');
+      expect(element.text()).toBe('');
+      element.triggerHandler({ type: 'keypress', keyCode: 13 });
+      expect(element.text()).toBe('');
+    });
+  });
+
+  describe('actions when bindKeypress set to false', function() {
+    beforeEach(configAriaProvider({
+      bindKeypress: false
+    }));
+    beforeEach(injectScopeAndCompiler);
+
+    it('should not a trigger click', function() {
+      scope.someAction = function() {};
+      var clickFn = spyOn(scope, 'someAction');
+
+      element = $compile('<div ng-click="someAction()" tabindex="0"></div>')(scope);
+
+      element.triggerHandler({type: 'keypress', keyCode: 32});
+
+      expect(clickFn).not.toHaveBeenCalled();
+    });
+  });
+
   describe('tabindex when disabled', function() {
     beforeEach(configAriaProvider({
       tabindex: false
@@ -499,7 +593,7 @@ function expectAriaAttrOnEachElement(elem, ariaAttr, expected) {
   });
 }
 
-function configAriaProvider (config) {
+function configAriaProvider(config) {
   return function() {
     angular.module('ariaTest', ['ngAria']).config(function($ariaProvider) {
       $ariaProvider.config(config);

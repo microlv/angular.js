@@ -42,8 +42,9 @@ angular.scenario.dsl = angular.scenario.dsl || function(name, fn) {
     /* jshint -W040 *//* The dsl binds `this` for us when calling chained functions */
     function executeStatement(statement, args) {
       var result = statement.apply(this, args);
-      if (angular.isFunction(result) || result instanceof angular.scenario.Future)
+      if (angular.isFunction(result) || result instanceof angular.scenario.Future) {
         return result;
+      }
       var self = this;
       var chain = angular.extend({}, result);
       angular.forEach(chain, function(value, name) {
@@ -217,10 +218,10 @@ function callerFile(offset) {
     if (line) {
       if (line.indexOf('@') !== -1) {
         // Firefox
-        line = line.substring(line.indexOf('@')+1);
+        line = line.substring(line.indexOf('@') + 1);
       } else {
         // Chrome
-        line = line.substring(line.indexOf('(')+1).replace(')', '');
+        line = line.substring(line.indexOf('(') + 1).replace(')', '');
       }
     }
 
@@ -238,7 +239,7 @@ function callerFile(offset) {
  *
  * To work around this we instead use our own handler that fires a real event.
  */
-(function(fn){
+(function(fn) {
   // We need a handle to the original trigger function for input tests.
   var parentTrigger = fn._originalTrigger = fn.trigger;
   fn.trigger = function(type) {
@@ -268,7 +269,7 @@ _jQuery.fn.bindings = function(windowJquery, bindExp) {
       bindSelector = '.ng-binding:visible';
   if (angular.isString(bindExp)) {
     bindExp = bindExp.replace(/\s/g, '');
-    match = function (actualExp) {
+    match = function(actualExp) {
       if (actualExp) {
         actualExp = actualExp.replace(/\s/g, '');
         if (actualExp == bindExp) return true;
@@ -304,7 +305,7 @@ _jQuery.fn.bindings = function(windowJquery, bindExp) {
     var element = windowJquery(this),
         bindings;
     if (bindings = element.data('$binding')) {
-      for(var expressions = [], binding, j=0, jj=bindings.length;  j<jj; j++) {
+      for (var expressions = [], binding, j=0, jj=bindings.length; j < jj; j++) {
         binding = bindings[j];
 
         if (binding.expressions) {
@@ -314,7 +315,7 @@ _jQuery.fn.bindings = function(windowJquery, bindExp) {
         }
         for (var scope, expression, i = 0, ii = expressions.length; i < ii; i++) {
           expression = expressions[i];
-          if(match(expression)) {
+          if (match(expression)) {
             scope = scope || element.scope();
             push(scope.$eval(expression));
           }

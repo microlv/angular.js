@@ -70,7 +70,7 @@
 </head>
 <body>
   <div id="wrapper">
-    <header class="header header-fixed">
+    <header scroll-y-offset-element class="header header-fixed">
       <section class="navbar navbar-inverse docs-navbar-primary" ng-controller="DocsSearchCtrl">
         <div class="container">
           <div class="row">
@@ -146,9 +146,6 @@
         </div>
         <div class="search-results-container" ng-show="hasResults">
           <div class="container">
-            <a href="" ng-click="hideResults()" class="search-close">
-              <span class="glyphicon glyphicon-remove search-close-icon"></span> Close
-            </a>
             <div class="search-results-frame">
               <div ng-repeat="(key, value) in results" class="search-results-group" ng-class="colClassName + ' col-group-' + key">
                 <h4 class="search-results-group-heading">{{ key }}</h4>
@@ -159,6 +156,9 @@
                 </div>
               </div>
             </div>
+            <a href="" ng-click="hideResults()" class="search-close">
+              <span class="glyphicon glyphicon-remove search-close-icon"></span> Close
+            </a>
           </div>
         </div>
       </section>
@@ -220,7 +220,7 @@
         <p class="pull-right"><a back-to-top>Back to top</a></p>
 
         <p>
-          Super-powered by Google  ©2010-2014
+          Super-powered by Google  ©2010-2015
           ( <a id="version"
                ng-href="https://github.com/angular/angular.js/blob/master/CHANGELOG.md#{{versionNumber}}"
                ng-bind-template="v{{version}}">

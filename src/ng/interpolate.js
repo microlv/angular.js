@@ -50,7 +50,7 @@ function $InterpolateProvider() {
    * @param {string=} value new value to set the starting symbol to.
    * @returns {string|self} Returns the symbol when used as getter and self if used as setter.
    */
-  this.startSymbol = function(value){
+  this.startSymbol = function(value) {
     if (value) {
       startSymbol = value;
       return this;
@@ -68,7 +68,7 @@ function $InterpolateProvider() {
    * @param {string=} value new value to set the ending symbol to.
    * @returns {string|self} Returns the symbol when used as getter and self if used as setter.
    */
-  this.endSymbol = function(value){
+  this.endSymbol = function(value) {
     if (value) {
       endSymbol = value;
       return this;
@@ -86,6 +86,28 @@ function $InterpolateProvider() {
 
     function escape(ch) {
       return '\\\\\\' + ch;
+    }
+
+    function unescapeText(text) {
+      return text.replace(escapedStartRegexp, startSymbol).
+        replace(escapedEndRegexp, endSymbol);
+    }
+
+    function stringify(value) {
+      if (value == null) { // null || undefined
+        return '';
+      }
+      switch (typeof value) {
+        case 'string':
+          break;
+        case 'number':
+          value = '' + value;
+          break;
+        default:
+          value = toJson(value);
+      }
+
+      return value;
     }
 
     /**
@@ -194,9 +216,9 @@ function $InterpolateProvider() {
           concat = [],
           expressionPositions = [];
 
-      while(index < textLength) {
-        if ( ((startIndex = text.indexOf(startSymbol, index)) != -1) &&
-             ((endIndex = text.indexOf(endSymbol, startIndex + startSymbolLength)) != -1) ) {
+      while (index < textLength) {
+        if (((startIndex = text.indexOf(startSymbol, index)) != -1) &&
+             ((endIndex = text.indexOf(endSymbol, startIndex + startSymbolLength)) != -1)) {
           if (index !== startIndex) {
             concat.push(unescapeText(text.substring(index, startIndex)));
           }
@@ -230,37 +252,17 @@ function $InterpolateProvider() {
 
       if (!mustHaveExpression || expressions.length) {
         var compute = function(values) {
-          for(var i = 0, ii = expressions.length; i < ii; i++) {
+          for (var i = 0, ii = expressions.length; i < ii; i++) {
             if (allOrNothing && isUndefined(values[i])) return;
             concat[expressionPositions[i]] = values[i];
           }
           return concat.join('');
         };
 
-        var getValue = function (value) {
+        var getValue = function(value) {
           return trustedContext ?
             $sce.getTrusted(trustedContext, value) :
             $sce.valueOf(value);
-        };
-
-        var stringify = function (value) {
-          if (value == null) { // null || undefined
-            return '';
-          }
-          switch (typeof value) {
-            case 'string': {
-              break;
-            }
-            case 'number': {
-              value = '' + value;
-              break;
-            }
-            default: {
-              value = toJson(value);
-            }
-          }
-
-          return value;
         };
 
         return extend(function interpolationFn(context) {
@@ -274,7 +276,7 @@ function $InterpolateProvider() {
               }
 
               return compute(values);
-            } catch(err) {
+            } catch (err) {
               var newErr = $interpolateMinErr('interr', "Can't interpolate: {0}\n{1}", text,
                   err.toString());
               $exceptionHandler(newErr);
@@ -284,7 +286,7 @@ function $InterpolateProvider() {
           // all of these properties are undocumented for now
           exp: text, //just for compatibility with regular watchers created via $watch
           expressions: expressions,
-          $$watchDelegate: function (scope, listener, objectEquality) {
+          $$watchDelegate: function(scope, listener, objectEquality) {
             var lastValue;
             return scope.$watchGroup(parseFns, function interpolateFnWatcher(values, oldValues) {
               var currValue = compute(values);
@@ -297,15 +299,11 @@ function $InterpolateProvider() {
         });
       }
 
-      function unescapeText(text) {
-        return text.replace(escapedStartRegexp, startSymbol).
-          replace(escapedEndRegexp, endSymbol);
-      }
-
       function parseStringifyInterceptor(value) {
         try {
-          return stringify(getValue(value));
-        } catch(err) {
+          value = getValue(value);
+          return allOrNothing && !isDefined(value) ? value : stringify(value);
+        } catch (err) {
           var newErr = $interpolateMinErr('interr', "Can't interpolate: {0}\n{1}", text,
             err.toString());
           $exceptionHandler(newErr);

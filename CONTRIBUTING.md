@@ -66,13 +66,13 @@ Help us to maximize the effort we can spend fixing issues and adding new
 features, by not reporting duplicate issues.  Providing the following information will increase the
 chances of your issue being dealt with quickly:
 
-* **Overview of the issue** - if an error is being thrown a non-minified stack trace helps
+* **Overview of the Issue** - if an error is being thrown a non-minified stack trace helps
 * **Motivation for or Use Case** - explain why this is a bug for you
 * **Angular Version(s)** - is it a regression?
 * **Browsers and Operating System** - is this a problem with all browsers or only IE8?
-* **Reproduce the error** - provide a live example (using [Plunker][plunker] or
+* **Reproduce the Error** - provide a live example (using [Plunker][plunker] or
   [JSFiddle][jsfiddle]) or a unambiguous set of steps.
-* **Related issues** - has a similar issue been reported before?
+* **Related Issues** - has a similar issue been reported before?
 * **Suggest a Fix** - if you can't fix the bug yourself, perhaps you can point to what might be
   causing the problem (line of code or commit)
 
@@ -87,7 +87,7 @@ Before you submit your pull request consider the following guidelines:
   that relates to your submission. You don't want to duplicate effort.
 * Please sign our [Contributor License Agreement (CLA)](#cla) before sending pull
   requests. We cannot accept code without this.
-* Make your changes in a new git branch
+* Make your changes in a new git branch:
 
      ```shell
      git checkout -b my-fix-branch master
@@ -107,7 +107,7 @@ Before you submit your pull request consider the following guidelines:
      ```
   Note: the optional commit `-a` command line option will automatically "add" and "rm" edited files.
 
-* Build your changes locally to ensure all the tests pass
+* Build your changes locally to ensure all the tests pass:
 
     ```shell
     grunt test
@@ -120,14 +120,14 @@ Before you submit your pull request consider the following guidelines:
     ```
 
 * In GitHub, send a pull request to `angular:master`.
-* If we suggest changes then
+* If we suggest changes then:
   * Make the required updates.
   * Re-run the Angular test suite to ensure tests are still passing.
   * Rebase your branch and force push to your GitHub repository (this will update your Pull Request):
 
     ```shell
     git rebase master -i
-    git push -f
+    git push origin my-fix-branch -f
     ```
 
 That's it! Thank you for your contribution!
@@ -173,7 +173,7 @@ To ensure consistency throughout the source code, keep these rules in mind as yo
     * **Do not use namespaces**: Instead,  wrap the entire angular code base in an anonymous closure and
       export our API explicitly rather than implicitly.
     * Wrap all code at **100 characters**.
-    * Instead of complex inheritance hierarchies, we **prefer simple objects**. We use prototypical
+    * Instead of complex inheritance hierarchies, we **prefer simple objects**. We use prototypal
       inheritance only when absolutely necessary.
     * We **love functions and closures** and, whenever possible, prefer them over objects.
     * To write concise code that can be better minified, we **use aliases internally** that map to the

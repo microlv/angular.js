@@ -146,6 +146,16 @@ describe('ngRepeat', function() {
     expect(element.text()).toEqual('misko:swe|shyam:set|');
   });
 
+  it('should iterate over on object/map where (key,value) contains whitespaces', function() {
+    element = $compile(
+      '<ul>' +
+        '<li ng-repeat="(  key ,  value  ) in items">{{key}}:{{value}}|</li>' +
+      '</ul>')(scope);
+    scope.items = {me:'swe', you:'set'};
+    scope.$digest();
+    expect(element.text()).toEqual('me:swe|you:set|');
+  });
+
   it('should iterate over an object/map with identical values', function() {
     element = $compile(
       '<ul>' +
@@ -153,7 +163,7 @@ describe('ngRepeat', function() {
       '</ul>')(scope);
     scope.items = {age:20, wealth:20, prodname: "Bingo", dogname: "Bingo", codename: "20"};
     scope.$digest();
-    expect(element.text()).toEqual('age:20|codename:20|dogname:Bingo|prodname:Bingo|wealth:20|');
+    expect(element.text()).toEqual('age:20|wealth:20|prodname:Bingo|dogname:Bingo|codename:20|');
   });
 
   describe('track by', function() {
@@ -192,7 +202,7 @@ describe('ngRepeat', function() {
 
 
     it('should still filter when track is present', function() {
-      scope.isIgor = function (item) {
+      scope.isIgor = function(item) {
         return item.name === 'igor';
       };
       element = $compile(
@@ -207,9 +217,9 @@ describe('ngRepeat', function() {
 
 
     it('should track using provided function when a filter is present', function() {
-      scope.newArray = function (items) {
+      scope.newArray = function(items) {
         var newArray = [];
-        angular.forEach(items, function (item) {
+        angular.forEach(items, function(item) {
           newArray.push({
             id: item.id,
             name: item.name
@@ -372,12 +382,12 @@ describe('ngRepeat', function() {
         '<div ng-repeat="item in items | filter:x as results track by $index">{{item.name}}/</div>')(scope);
 
       scope.items = [
-        { name : 'red' },
-        { name : 'blue' },
-        { name : 'green' },
-        { name : 'black' },
-        { name : 'orange' },
-        { name : 'blonde' }
+        { name: 'red' },
+        { name: 'blue' },
+        { name: 'green' },
+        { name: 'black' },
+        { name: 'orange' },
+        { name: 'blonde' }
       ];
 
       expect(scope.results).toBeUndefined();
@@ -387,9 +397,9 @@ describe('ngRepeat', function() {
       scope.$digest();
 
       expect(scope.results).toEqual([
-        { name : 'blue' },
-        { name : 'black' },
-        { name : 'blonde' }
+        { name: 'blue' },
+        { name: 'black' },
+        { name: 'blonde' }
       ]);
 
       scope.items = [];
@@ -421,12 +431,12 @@ describe('ngRepeat', function() {
     it('should support alias identifiers containing reserved words', inject(function($exceptionHandler) {
       scope.x = 'bl';
       scope.items = [
-        { name : 'red' },
-        { name : 'blue' },
-        { name : 'green' },
-        { name : 'black' },
-        { name : 'orange' },
-        { name : 'blonde' }
+        { name: 'red' },
+        { name: 'blue' },
+        { name: 'green' },
+        { name: 'black' },
+        { name: 'orange' },
+        { name: 'blonde' }
       ];
       forEach([
         'null2',
@@ -451,12 +461,12 @@ describe('ngRepeat', function() {
     it('should throw if alias identifier is not a simple identifier', inject(function($exceptionHandler) {
       scope.x = 'bl';
       scope.items = [
-        { name : 'red' },
-        { name : 'blue' },
-        { name : 'green' },
-        { name : 'black' },
-        { name : 'orange' },
-        { name : 'blonde' }
+        { name: 'red' },
+        { name: 'blue' },
+        { name: 'green' },
+        { name: 'black' },
+        { name: 'orange' },
+        { name: 'blonde' }
       ];
 
       forEach([
@@ -464,6 +474,8 @@ describe('ngRepeat', function() {
         'this',
         'undefined',
         '$parent',
+        '$root',
+        '$id',
         '$index',
         '$first',
         '$middle',
@@ -577,7 +589,7 @@ describe('ngRepeat', function() {
       '</ul>')(scope);
     scope.items = {'misko':'m', 'shyam':'s', 'frodo':'f'};
     scope.$digest();
-    expect(element.text()).toEqual('frodo:f:0|misko:m:1|shyam:s:2|');
+    expect(element.text()).toEqual('misko:m:0|shyam:s:1|frodo:f:2|');
   });
 
 
@@ -646,10 +658,10 @@ describe('ngRepeat', function() {
     scope.items = {'misko':'m', 'shyam':'s', 'doug':'d', 'frodo':'f'};
     scope.$digest();
     expect(element.text()).
-        toEqual('doug:d:true-false-false|' +
-                'frodo:f:false-true-false|' +
-                'misko:m:false-true-false|' +
-                'shyam:s:false-false-true|');
+        toEqual('misko:m:true-false-false|' +
+                'shyam:s:false-true-false|' +
+                'doug:d:false-true-false|' +
+                'frodo:f:false-false-true|');
 
     delete scope.items.doug;
     delete scope.items.frodo;
@@ -671,15 +683,15 @@ describe('ngRepeat', function() {
     scope.items = {'misko':'m', 'shyam':'s', 'doug':'d', 'frodo':'f'};
     scope.$digest();
     expect(element.text()).
-        toBe('doug:d:true-false|' +
-                'frodo:f:false-true|' +
-                'misko:m:true-false|' +
-                'shyam:s:false-true|');
+        toBe('misko:m:true-false|' +
+                'shyam:s:false-true|' +
+                'doug:d:true-false|' +
+                'frodo:f:false-true|');
 
     delete scope.items.frodo;
     delete scope.items.shyam;
     scope.$digest();
-    expect(element.text()).toBe('doug:d:true-false|misko:m:false-true|');
+    expect(element.text()).toBe('misko:m:true-false|doug:d:false-true|');
   });
 
 
@@ -690,11 +702,12 @@ describe('ngRepeat', function() {
             '</ul>')(scope);
     scope.items = {'misko':'m', 'shyam':'s', 'doug':'d', 'frodo':'f', '$toBeFilteredOut': 'xxxx'};
     scope.$digest();
+
     expect(element.text()).
-        toEqual('doug:d:true-false-false|' +
-        'frodo:f:false-true-false|' +
-        'misko:m:false-true-false|' +
-        'shyam:s:false-false-true|');
+        toEqual('misko:m:true-false-false|' +
+        'shyam:s:false-true-false|' +
+        'doug:d:false-true-false|' +
+        'frodo:f:false-false-true|');
   });
 
 
@@ -706,10 +719,10 @@ describe('ngRepeat', function() {
     scope.items = {'misko':'m', 'shyam':'s', 'doug':'d', 'frodo':'f', '$toBeFilteredOut': 'xxxx'};
     scope.$digest();
     expect(element.text()).
-        toEqual('doug:d:true-false|' +
-        'frodo:f:false-true|' +
-        'misko:m:true-false|' +
-        'shyam:s:false-true|');
+        toEqual('misko:m:true-false|' +
+        'shyam:s:false-true|' +
+        'doug:d:true-false|' +
+        'frodo:f:false-true|');
   });
 
 
@@ -925,25 +938,21 @@ describe('ngRepeat', function() {
     }));
 
 
-    if (!msie || msie > 8) {
-      // only IE>8 supports element directives
-
-      it('should work when placed on a root element of element directive with ASYNC replaced template',
-          inject(function($templateCache, $compile, $rootScope) {
-        $compileProvider.directive('replaceMeWithRepeater', function() {
-          return {
-            restrict: 'E',
-            replace: true,
-            templateUrl: 'replace-me-with-repeater.html'
-          };
-        });
-        $templateCache.put('replace-me-with-repeater.html', '<div ng-repeat="i in [1,2,3]">{{i}}</div>');
-        element = $compile('<div><replace-me-with-repeater></replace-me-with-repeater></div>')($rootScope);
-        expect(element.text()).toBe('');
-        $rootScope.$apply();
-        expect(element.text()).toBe('123');
-      }));
-    }
+    it('should work when placed on a root element of element directive with ASYNC replaced template',
+        inject(function($templateCache, $compile, $rootScope) {
+      $compileProvider.directive('replaceMeWithRepeater', function() {
+        return {
+          restrict: 'E',
+          replace: true,
+          templateUrl: 'replace-me-with-repeater.html'
+        };
+      });
+      $templateCache.put('replace-me-with-repeater.html', '<div ng-repeat="i in [1,2,3]">{{i}}</div>');
+      element = $compile('<div><replace-me-with-repeater></replace-me-with-repeater></div>')($rootScope);
+      expect(element.text()).toBe('');
+      $rootScope.$apply();
+      expect(element.text()).toBe('123');
+    }));
 
     it('should work when combined with an ASYNC template that loads after the first digest', inject(function($httpBackend, $compile, $rootScope) {
       $compileProvider.directive('test', function() {
@@ -969,8 +978,8 @@ describe('ngRepeat', function() {
     }));
   });
 
-  it('should add separator comments after each item', inject(function ($compile, $rootScope) {
-    var check = function () {
+  it('should add separator comments after each item', inject(function($compile, $rootScope) {
+    var check = function() {
       var children = element.find('div');
       expect(children.length).toBe(3);
 
@@ -1002,7 +1011,7 @@ describe('ngRepeat', function() {
 
 
   it('should remove whole block even if the number of elements inside it changes', inject(
-      function ($compile, $rootScope) {
+      function($compile, $rootScope) {
 
     $rootScope.values = [1, 2, 3];
 
@@ -1035,7 +1044,7 @@ describe('ngRepeat', function() {
 
 
   it('should move whole block even if the number of elements inside it changes', inject(
-      function ($compile, $rootScope) {
+      function($compile, $rootScope) {
 
     $rootScope.values = [1, 2, 3];
 
@@ -1173,7 +1182,7 @@ describe('ngRepeat', function() {
       expect(newLis[2]).toEqual(lis[1]);
     });
 
-    it('should be stable even if the collection is initially undefined', function () {
+    it('should be stable even if the collection is initially undefined', function() {
       scope.items = undefined;
       scope.$digest();
 
@@ -1232,7 +1241,7 @@ describe('ngRepeat', function() {
   });
 
 
-  describe('ngRepeatStart', function () {
+  describe('ngRepeatStart', function() {
     it('should grow multi-node repeater', inject(function($compile, $rootScope) {
       $rootScope.show = false;
       $rootScope.books = [
@@ -1253,7 +1262,7 @@ describe('ngRepeat', function() {
     }));
 
 
-    it('should not clobber ng-if when updating collection', inject(function ($compile, $rootScope) {
+    it('should not clobber ng-if when updating collection', inject(function($compile, $rootScope) {
       $rootScope.values = [1, 2, 3];
       $rootScope.showMe = true;
 
@@ -1383,7 +1392,7 @@ describe('ngRepeat animations', function() {
     };
   }));
 
-  afterEach(function(){
+  afterEach(function() {
     body.empty();
   });
 
