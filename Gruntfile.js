@@ -17,10 +17,6 @@ module.exports = function(grunt) {
   NG_VERSION.cdn = versionInfo.cdnVersion;
   var dist = 'angular-'+ NG_VERSION.full;
 
-  //global beforeEach
-  util.init();
-
-
   //config
   grunt.initConfig({
     NG_VERSION: NG_VERSION,
@@ -130,6 +126,9 @@ module.exports = function(grunt) {
       ngLocale: {
         files: { src: 'src/ngLocale/**/*.js' },
       },
+      ngMessageFormat: {
+        files: { src: 'src/ngMessageFormat/**/*.js' },
+      },
       ngMessages: {
         files: { src: 'src/ngMessages/**/*.js' },
       },
@@ -204,6 +203,10 @@ module.exports = function(grunt) {
         dest: 'build/angular-resource.js',
         src: util.wrap(files['angularModules']['ngResource'], 'module')
       },
+      messageformat: {
+        dest: 'build/angular-messageFormat.js',
+        src: util.wrap(files['angularModules']['ngMessageFormat'], 'module')
+      },
       messages: {
         dest: 'build/angular-messages.js',
         src: util.wrap(files['angularModules']['ngMessages'], 'module')
@@ -236,6 +239,7 @@ module.exports = function(grunt) {
       animate: 'build/angular-animate.js',
       cookies: 'build/angular-cookies.js',
       loader: 'build/angular-loader.js',
+      messageformat: 'build/angular-messageFormat.js',
       messages: 'build/angular-messages.js',
       touch: 'build/angular-touch.js',
       resource: 'build/angular-resource.js',
@@ -251,8 +255,19 @@ module.exports = function(grunt) {
         'test/**/*.js',
         '!test/ngScenario/DescribeSpec.js',
         '!src/ng/directive/attrs.js', // legitimate xit here
-        '!src/ngScenario/**/*.js'
-      ]
+        '!src/ngScenario/**/*.js',
+        '!test/helpers/privateMocks*.js'
+      ],
+      options: {
+        disallowed: [
+          'iit',
+          'xit',
+          'tthey',
+          'xthey',
+          'ddescribe',
+          'xdescribe'
+        ]
+      }
     },
 
     "merge-conflict": {
@@ -285,6 +300,10 @@ module.exports = function(grunt) {
     },
 
     shell: {
+      "npm-install": {
+        command: path.normalize('scripts/npm/install-dependencies.sh')
+      },
+
       "promises-aplus-tests": {
         options: {
           stdout: false,
@@ -311,6 +330,10 @@ module.exports = function(grunt) {
     }
   });
 
+  // global beforeEach task
+  if (!process.env.TRAVIS) {
+    grunt.task.run('shell:npm-install');
+  }
 
   //alias tasks
   grunt.registerTask('test', 'Run unit, docs and e2e tests with Karma', ['jshint', 'jscs', 'package','test:unit','test:promises-aplus', 'tests:docs', 'test:protractor']);

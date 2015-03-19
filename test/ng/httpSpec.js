@@ -2,10 +2,16 @@
 
 describe('$http', function() {
 
-  var callback;
+  var callback, mockedCookies;
 
   beforeEach(function() {
     callback = jasmine.createSpy('done');
+    mockedCookies = {};
+    module({
+      $$cookieReader: function() {
+        return mockedCookies;
+      }
+    });
   });
 
   beforeEach(module(function($exceptionHandlerProvider) {
@@ -428,6 +434,34 @@ describe('$http', function() {
           var httpPromise = $http({url: '/url', method: 'GET'});
           expect(httpPromise.success(callback)).toBe(httpPromise);
         });
+
+
+        it('should error if the callback is not a function', function() {
+          expect(function() {
+            $http({url: '/url', method: 'GET'}).success();
+          }).toThrowMinErr('ng', 'areq');
+
+          expect(function() {
+            $http({url: '/url', method: 'GET'}).success(undefined);
+          }).toThrowMinErr('ng', 'areq');
+
+          expect(function() {
+            $http({url: '/url', method: 'GET'}).success(null);
+          }).toThrowMinErr('ng', 'areq');
+
+
+          expect(function() {
+            $http({url: '/url', method: 'GET'}).success({});
+          }).toThrowMinErr('ng', 'areq');
+
+          expect(function() {
+            $http({url: '/url', method: 'GET'}).success([]);
+          }).toThrowMinErr('ng', 'areq');
+
+          expect(function() {
+            $http({url: '/url', method: 'GET'}).success('error');
+          }).toThrowMinErr('ng', 'areq');
+        });
       });
 
 
@@ -451,6 +485,34 @@ describe('$http', function() {
           $httpBackend.expect('GET', '/url').respond(543, 'bad error', {'request-id': '123'});
           var httpPromise = $http({url: '/url', method: 'GET'});
           expect(httpPromise.error(callback)).toBe(httpPromise);
+        });
+
+
+        it('should error if the callback is not a function', function() {
+          expect(function() {
+            $http({url: '/url', method: 'GET'}).error();
+          }).toThrowMinErr('ng', 'areq');
+
+          expect(function() {
+            $http({url: '/url', method: 'GET'}).error(undefined);
+          }).toThrowMinErr('ng', 'areq');
+
+          expect(function() {
+            $http({url: '/url', method: 'GET'}).error(null);
+          }).toThrowMinErr('ng', 'areq');
+
+
+          expect(function() {
+            $http({url: '/url', method: 'GET'}).error({});
+          }).toThrowMinErr('ng', 'areq');
+
+          expect(function() {
+            $http({url: '/url', method: 'GET'}).error([]);
+          }).toThrowMinErr('ng', 'areq');
+
+          expect(function() {
+            $http({url: '/url', method: 'GET'}).error('error');
+          }).toThrowMinErr('ng', 'areq');
         });
       });
     });
@@ -691,7 +753,7 @@ describe('$http', function() {
       });
 
       it('should not set XSRF cookie for cross-domain requests', inject(function($browser) {
-        $browser.cookies('XSRF-TOKEN', 'secret');
+        mockedCookies['XSRF-TOKEN'] =  'secret';
         $browser.url('http://host.com/base');
         $httpBackend.expect('GET', 'http://www.test.com/url', undefined, function(headers) {
           return headers['X-XSRF-TOKEN'] === undefined;
@@ -733,15 +795,15 @@ describe('$http', function() {
         $httpBackend.flush();
       });
 
-      it('should set the XSRF cookie into a XSRF header', inject(function($browser) {
+      it('should set the XSRF cookie into a XSRF header', inject(function() {
         function checkXSRF(secret, header) {
           return function(headers) {
             return headers[header || 'X-XSRF-TOKEN'] == secret;
           };
         }
 
-        $browser.cookies('XSRF-TOKEN', 'secret');
-        $browser.cookies('aCookie', 'secret2');
+        mockedCookies['XSRF-TOKEN'] =  'secret';
+        mockedCookies['aCookie'] = 'secret2';
         $httpBackend.expect('GET', '/url', undefined, checkXSRF('secret')).respond('');
         $httpBackend.expect('POST', '/url', undefined, checkXSRF('secret')).respond('');
         $httpBackend.expect('PUT', '/url', undefined, checkXSRF('secret')).respond('');
@@ -809,23 +871,18 @@ describe('$http', function() {
         expect(config.foo).toBeUndefined();
       });
 
-      it('should check the cache before checking the XSRF cookie', inject(function($browser, $cacheFactory) {
-        var testCache = $cacheFactory('testCache'),
-            executionOrder = [];
+      it('should check the cache before checking the XSRF cookie', inject(function($cacheFactory) {
+        var testCache = $cacheFactory('testCache');
 
-        spyOn($browser, 'cookies').andCallFake(function() {
-          executionOrder.push('cookies');
-          return {'XSRF-TOKEN':'foo'};
-        });
         spyOn(testCache, 'get').andCallFake(function() {
-          executionOrder.push('cache');
+          mockedCookies['XSRF-TOKEN'] = 'foo';
         });
 
-        $httpBackend.expect('GET', '/url', undefined).respond('');
+        $httpBackend.expect('GET', '/url', undefined, function(headers) {
+          return headers['X-XSRF-TOKEN'] === 'foo';
+        }).respond('');
         $http({url: '/url', method: 'GET', cache: testCache});
         $httpBackend.flush();
-
-        expect(executionOrder).toEqual(['cache', 'cookies']);
       }));
     });
 
@@ -1038,6 +1095,18 @@ describe('$http', function() {
           expect(callback).toHaveBeenCalledOnce();
         });
 
+        it('should have access to request headers with mixed case', function() {
+          $httpBackend.expect('POST', '/url', 'header1').respond(200);
+          $http.post('/url', 'req', {
+            headers: {H1: 'header1'},
+            transformRequest: function(data, headers) {
+              return headers('H1');
+            }
+          }).success(callback);
+          $httpBackend.flush();
+
+          expect(callback).toHaveBeenCalledOnce();
+        });
 
         it('should pipeline more functions', function() {
           function first(d, h) {return d + '-first' + ':' + h('h1');}

@@ -1156,8 +1156,8 @@ function createDateInputType(type, regexp, parseDate, format) {
         // parser/formatter in the processing chain so that the model
         // contains some different data format!
         var parsedDate = parseDate(value, previousDate);
-        if (timezone === 'UTC') {
-          parsedDate.setMinutes(parsedDate.getMinutes() - parsedDate.getTimezoneOffset());
+        if (timezone) {
+          parsedDate = convertTimezoneToLocal(parsedDate, timezone);
         }
         return parsedDate;
       }
@@ -1170,9 +1170,8 @@ function createDateInputType(type, regexp, parseDate, format) {
       }
       if (isValidDate(value)) {
         previousDate = value;
-        if (previousDate && timezone === 'UTC') {
-          var timezoneOffset = 60000 * previousDate.getTimezoneOffset();
-          previousDate = new Date(previousDate.getTime() + timezoneOffset);
+        if (previousDate && timezone) {
+          previousDate = convertTimezoneToLocal(previousDate, timezone, true);
         }
         return $filter('date')(value, format, timezone);
       } else {
@@ -1250,7 +1249,7 @@ function numberInputType(scope, element, attr, ctrl, $sniffer, $browser) {
     return value;
   });
 
-  if (attr.min || attr.ngMin) {
+  if (isDefined(attr.min) || attr.ngMin) {
     var minVal;
     ctrl.$validators.min = function(value) {
       return ctrl.$isEmpty(value) || isUndefined(minVal) || value >= minVal;
@@ -1266,7 +1265,7 @@ function numberInputType(scope, element, attr, ctrl, $sniffer, $browser) {
     });
   }
 
-  if (attr.max || attr.ngMax) {
+  if (isDefined(attr.max) || attr.ngMax) {
     var maxVal;
     ctrl.$validators.max = function(value) {
       return ctrl.$isEmpty(value) || isUndefined(maxVal) || value <= maxVal;

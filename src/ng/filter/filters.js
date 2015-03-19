@@ -302,6 +302,14 @@ function ampmGetter(date, formats) {
   return date.getHours() < 12 ? formats.AMPMS[0] : formats.AMPMS[1];
 }
 
+function eraGetter(date, formats) {
+  return date.getFullYear() <= 0 ? formats.ERAS[0] : formats.ERAS[1];
+}
+
+function longEraGetter(date, formats) {
+  return date.getFullYear() <= 0 ? formats.ERANAMES[0] : formats.ERANAMES[1];
+}
+
 var DATE_FORMATS = {
   yyyy: dateGetter('FullYear', 4),
     yy: dateGetter('FullYear', 2, 0, true),
@@ -328,10 +336,14 @@ var DATE_FORMATS = {
      a: ampmGetter,
      Z: timeZoneGetter,
     ww: weekGetter(2),
-     w: weekGetter(1)
+     w: weekGetter(1),
+     G: eraGetter,
+     GG: eraGetter,
+     GGG: eraGetter,
+     GGGG: longEraGetter
 };
 
-var DATE_FORMATS_SPLIT = /((?:[^yMdHhmsaZEw']+)|(?:'(?:[^']|'')*')|(?:E+|y+|M+|d+|H+|h+|m+|s+|a|Z|w+))(.*)/,
+var DATE_FORMATS_SPLIT = /((?:[^yMdHhmsaZEwG']+)|(?:'(?:[^']|'')*')|(?:E+|y+|M+|d+|H+|h+|m+|s+|a|Z|G+|w+))(.*)/,
     NUMBER_STRING = /^\-?\d+$/;
 
 /**
@@ -368,6 +380,8 @@ var DATE_FORMATS_SPLIT = /((?:[^yMdHhmsaZEw']+)|(?:'(?:[^']|'')*')|(?:E+|y+|M+|d
  *   * `'Z'`: 4 digit (+sign) representation of the timezone offset (-1200-+1200)
  *   * `'ww'`: Week of year, padded (00-53). Week 01 is the week with the first Thursday of the year
  *   * `'w'`: Week of year (0-53). Week 1 is the week with the first Thursday of the year
+ *   * `'G'`, `'GG'`, `'GGG'`: The abbreviated form of the era string (e.g. 'AD')
+ *   * `'GGGG'`: The long form of the era string (e.g. 'Anno Domini')
  *
  *   `format` string can also be one of the following predefined
  *   {@link guide/i18n localizable formats}:
@@ -393,7 +407,9 @@ var DATE_FORMATS_SPLIT = /((?:[^yMdHhmsaZEw']+)|(?:'(?:[^']|'')*')|(?:E+|y+|M+|d
  *    specified in the string input, the time is considered to be in the local timezone.
  * @param {string=} format Formatting rules (see Description). If not specified,
  *    `mediumDate` is used.
- * @param {string=} timezone Timezone to be used for formatting. Right now, only `'UTC'` is supported.
+ * @param {string=} timezone Timezone to be used for formatting. It understands UTC/GMT and the
+ *    continental US time zone abbreviations, but for general use, use a time zone offset, for
+ *    example, `'+0430'` (4 hours, 30 minutes east of the Greenwich meridian)
  *    If not specified, the timezone of the browser will be used.
  * @returns {string} Formatted string or the input if input is not recognized as date/millis.
  *
@@ -486,12 +502,8 @@ function dateFilter($locale) {
 
     var dateTimezoneOffset = date.getTimezoneOffset();
     if (timezone) {
-      var requestedTimezoneOffset = Date.parse('Jan 01, 1970 00:00:00 ' + timezone) / 60000;
-      if (!isNaN(requestedTimezoneOffset)) {
-        date = new Date(date.getTime());
-        date.setMinutes(date.getMinutes() + dateTimezoneOffset - requestedTimezoneOffset);
-        dateTimezoneOffset = requestedTimezoneOffset;
-      }
+      dateTimezoneOffset = timezoneToOffset(timezone, date.getTimezoneOffset());
+      date = convertTimezoneToLocal(date, timezone, true);
     }
     forEach(parts, function(value) {
       fn = DATE_FORMATS[value];

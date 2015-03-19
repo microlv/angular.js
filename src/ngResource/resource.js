@@ -85,7 +85,7 @@ function shallowClearAndCopy(src, dst) {
      }]);
  * ```
  *
- * @param {string} url A parametrized URL template with parameters prefixed by `:` as in
+ * @param {string} url A parameterized URL template with parameters prefixed by `:` as in
  *   `/user/:username`. If you are using a URL with a port number (e.g.
  *   `http://example.com:8080/api`), it will be respected.
  *
@@ -207,6 +207,7 @@ function shallowClearAndCopy(src, dst) {
  *   - HTTP GET "class" actions: `Resource.action([parameters], [success], [error])`
  *   - non-GET "class" actions: `Resource.action([parameters], postData, [success], [error])`
  *   - non-GET instance actions:  `instance.$action([parameters], [success], [error])`
+ *
  *
  *   Success callback is called with (value, responseHeaders) arguments. Error callback is called
  *   with (httpResponse) argument.

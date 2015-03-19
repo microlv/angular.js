@@ -65,6 +65,7 @@
   $FilterProvider,
   $InterpolateProvider,
   $IntervalProvider,
+  $$HashMapProvider,
   $HttpProvider,
   $HttpBackendProvider,
   $LocationProvider,
@@ -84,7 +85,8 @@
   $$RAFProvider,
   $$AsyncCallbackProvider,
   $WindowProvider,
-  $$jqLiteProvider
+  $$jqLiteProvider,
+  $$CookieReaderProvider
 */
 
 
@@ -116,6 +118,7 @@ function publishExternalAPI(angular) {
     'bootstrap': bootstrap,
     'copy': copy,
     'extend': extend,
+    'merge': merge,
     'equals': equals,
     'element': jqLite,
     'forEach': forEach,
@@ -238,7 +241,9 @@ function publishExternalAPI(angular) {
         $window: $WindowProvider,
         $$rAF: $$RAFProvider,
         $$asyncCallback: $$AsyncCallbackProvider,
-        $$jqLite: $$jqLiteProvider
+        $$jqLite: $$jqLiteProvider,
+        $$HashMap: $$HashMapProvider,
+        $$cookieReader: $$CookieReaderProvider
       });
     }
   ]);

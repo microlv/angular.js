@@ -1,5 +1,16 @@
 'use strict';
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *     Any commits to this file should be reviewed with security in mind.  *
+ *   Changes to this file can potentially create security vulnerabilities. *
+ *          An approval from 2 Core members with history of modifying      *
+ *                         this file is required.                          *
+ *                                                                         *
+ *  Does the change somehow allow for arbitrary javascript to be executed? *
+ *    Or allows for someone to change the prototype of built-in objects?   *
+ *     Or gives undesired access to variables likes document or window?    *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 var $sceMinErr = minErr('$sce');
 
 var SCE_CONTEXTS = {
@@ -797,7 +808,7 @@ function $SceProvider() {
      * escaping.
      *
      * @param {string} type The kind of context in which this value is safe for use.  e.g. url,
-     *   resource_url, html, js and css.
+     *   resourceUrl, html, js and css.
      * @param {*} value The value that that should be considered trusted/safe.
      * @returns {*} A value that can be used to stand in for the provided `value` in places
      * where Angular expects a $sce.trustAs() return value.

@@ -1,5 +1,16 @@
 'use strict';
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *     Any commits to this file should be reviewed with security in mind.  *
+ *   Changes to this file can potentially create security vulnerabilities. *
+ *          An approval from 2 Core members with history of modifying      *
+ *                         this file is required.                          *
+ *                                                                         *
+ *  Does the change somehow allow for arbitrary javascript to be executed? *
+ *    Or allows for someone to change the prototype of built-in objects?   *
+ *     Or gives undesired access to variables likes document or window?    *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 /* ! VARIABLE/FUNCTION NAMING CONVENTIONS THAT APPLY TO THIS FILE!
  *
  * DOM-related variables:
@@ -211,7 +222,8 @@
  * Require another directive and inject its controller as the fourth argument to the linking function. The
  * `require` takes a string name (or array of strings) of the directive(s) to pass in. If an array is used, the
  * injected argument will be an array in corresponding order. If no such directive can be
- * found, or if the directive does not have a controller, then an error is raised. The name can be prefixed with:
+ * found, or if the directive does not have a controller, then an error is raised (unless no link function
+ * is specified, in which case error checking is skipped). The name can be prefixed with:
  *
  * * (no prefix) - Locate the required controller on the current element. Throw an error if not found.
  * * `?` - Attempt to locate the required controller or pass `null` to the `link` fn if not found.
@@ -346,7 +358,7 @@
  * `templateUrl` declaration or manual compilation inside the compile function.
  * </div>
  *
- * <div class="alert alert-error">
+ * <div class="alert alert-danger">
  * **Note:** The `transclude` function that is passed to the compile function is deprecated, as it
  *   e.g. does not know about the right outer scope. Please use the transclude function that is passed
  *   to the link function instead.
@@ -625,7 +637,7 @@
  * @param {string|DOMElement} element Element or HTML string to compile into a template function.
  * @param {function(angular.Scope, cloneAttachFn=)} transclude function available to directives - DEPRECATED.
  *
- * <div class="alert alert-error">
+ * <div class="alert alert-danger">
  * **Note:** Passing a `transclude` function to the $compile function is deprecated, as it
  *   e.g. will not use the right outer scope. Please pass the transclude function as a
  *   `parentBoundTranscludeFn` to the link function instead.
@@ -778,6 +790,14 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
     return bindings;
   }
 
+  function assertValidDirectiveName(name) {
+    var letter = name.charAt(0);
+    if (!letter || letter !== lowercase(letter)) {
+      throw $compileMinErr('baddir', "Directive name '{0}' is invalid. The first character must be a lowercase letter", name);
+    }
+    return name;
+  }
+
   /**
    * @ngdoc method
    * @name $compileProvider#directive
@@ -796,6 +816,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
    this.directive = function registerDirective(name, directiveFactory) {
     assertNotHasOwnProperty(name, 'directive');
     if (isString(name)) {
+      assertValidDirectiveName(name);
       assertArg(directiveFactory, 'directiveFactory');
       if (!hasDirectives.hasOwnProperty(name)) {
         hasDirectives[name] = [];
@@ -1614,7 +1635,6 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
       var terminalPriority = -Number.MAX_VALUE,
           newScopeDirective,
           controllerDirectives = previousCompileContext.controllerDirectives,
-          controllers,
           newIsolateScopeDirective = previousCompileContext.newIsolateScopeDirective,
           templateDirective = previousCompileContext.templateDirective,
           nonTlbTranscludeDirective = previousCompileContext.nonTlbTranscludeDirective,
@@ -1672,7 +1692,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
 
         if (!directive.templateUrl && directive.controller) {
           directiveValue = directive.controller;
-          controllerDirectives = controllerDirectives || {};
+          controllerDirectives = controllerDirectives || createMap();
           assertNoDuplicate("'" + directiveName + "' controller",
               controllerDirectives[directiveName], directive, $compileNode);
           controllerDirectives[directiveName] = directive;
@@ -1840,51 +1860,74 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
 
 
       function getControllers(directiveName, require, $element, elementControllers) {
-        var value, retrievalMethod = 'data', optional = false;
-        var $searchElement = $element;
-        var match;
+        var value;
+
         if (isString(require)) {
-          match = require.match(REQUIRE_PREFIX_REGEXP);
-          require = require.substring(match[0].length);
+          var match = require.match(REQUIRE_PREFIX_REGEXP);
+          var name = require.substring(match[0].length);
+          var inheritType = match[1] || match[3];
+          var optional = match[2] === '?';
 
-          if (match[3]) {
-            if (match[1]) match[3] = null;
-            else match[1] = match[3];
-          }
-          if (match[1] === '^') {
-            retrievalMethod = 'inheritedData';
-          } else if (match[1] === '^^') {
-            retrievalMethod = 'inheritedData';
-            $searchElement = $element.parent();
-          }
-          if (match[2] === '?') {
-            optional = true;
+          //If only parents then start at the parent element
+          if (inheritType === '^^') {
+            $element = $element.parent();
+          //Otherwise attempt getting the controller from elementControllers in case
+          //the element is transcluded (and has no data) and to avoid .data if possible
+          } else {
+            value = elementControllers && elementControllers[name];
+            value = value && value.instance;
           }
 
-          value = null;
-
-          if (elementControllers && retrievalMethod === 'data') {
-            if (value = elementControllers[require]) {
-              value = value.instance;
-            }
+          if (!value) {
+            var dataName = '$' + name + 'Controller';
+            value = inheritType ? $element.inheritedData(dataName) : $element.data(dataName);
           }
-          value = value || $searchElement[retrievalMethod]('$' + require + 'Controller');
 
           if (!value && !optional) {
             throw $compileMinErr('ctreq',
                 "Controller '{0}', required by directive '{1}', can't be found!",
-                require, directiveName);
+                name, directiveName);
           }
-          return value || null;
         } else if (isArray(require)) {
           value = [];
-          forEach(require, function(require) {
-            value.push(getControllers(directiveName, require, $element, elementControllers));
-          });
+          for (var i = 0, ii = require.length; i < ii; i++) {
+            value[i] = getControllers(directiveName, require[i], $element, elementControllers);
+          }
         }
-        return value;
+
+        return value || null;
       }
 
+      function setupControllers($element, attrs, transcludeFn, controllerDirectives, isolateScope, scope) {
+        var elementControllers = createMap();
+        for (var controllerKey in controllerDirectives) {
+          var directive = controllerDirectives[controllerKey];
+          var locals = {
+            $scope: directive === newIsolateScopeDirective || directive.$$isolateScope ? isolateScope : scope,
+            $element: $element,
+            $attrs: attrs,
+            $transclude: transcludeFn
+          };
+
+          var controller = directive.controller;
+          if (controller == '@') {
+            controller = attrs[directive.name];
+          }
+
+          var controllerInstance = $controller(controller, locals, true, directive.controllerAs);
+
+          // For directives with element transclusion the element is a comment,
+          // but jQuery .data doesn't support attaching data to comment nodes as it's hard to
+          // clean up (http://bugs.jquery.com/ticket/8335).
+          // Instead, we save the controllers for the element in a local hash and attach to .data
+          // later, once we have the actual element.
+          elementControllers[directive.name] = controllerInstance;
+          if (!hasElementTranscludeDirective) {
+            $element.data('$' + directive.name + 'Controller', controllerInstance.instance);
+          }
+        }
+        return elementControllers;
+      }
 
       function nodeLinkFn(childLinkFn, scope, linkNode, $rootElement, boundTranscludeFn,
                           thisLinkFn) {
@@ -1911,36 +1954,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
         }
 
         if (controllerDirectives) {
-          // TODO: merge `controllers` and `elementControllers` into single object.
-          controllers = {};
-          elementControllers = {};
-          forEach(controllerDirectives, function(directive) {
-            var locals = {
-              $scope: directive === newIsolateScopeDirective || directive.$$isolateScope ? isolateScope : scope,
-              $element: $element,
-              $attrs: attrs,
-              $transclude: transcludeFn
-            }, controllerInstance;
-
-            controller = directive.controller;
-            if (controller == '@') {
-              controller = attrs[directive.name];
-            }
-
-            controllerInstance = $controller(controller, locals, true, directive.controllerAs);
-
-            // For directives with element transclusion the element is a comment,
-            // but jQuery .data doesn't support attaching data to comment nodes as it's hard to
-            // clean up (http://bugs.jquery.com/ticket/8335).
-            // Instead, we save the controllers for the element in a local hash and attach to .data
-            // later, once we have the actual element.
-            elementControllers[directive.name] = controllerInstance;
-            if (!hasElementTranscludeDirective) {
-              $element.data('$' + directive.name + 'Controller', controllerInstance.instance);
-            }
-
-            controllers[directive.name] = controllerInstance;
-          });
+          elementControllers = setupControllers($element, attrs, transcludeFn, controllerDirectives, isolateScope, scope);
         }
 
         if (newIsolateScopeDirective) {
@@ -1954,14 +1968,14 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
                                       isolateScope.$$isolateBindings,
                                       newIsolateScopeDirective, isolateScope);
         }
-        if (controllers) {
+        if (elementControllers) {
           // Initialize bindToController bindings for new/isolate scopes
           var scopeDirective = newIsolateScopeDirective || newScopeDirective;
           var bindings;
           var controllerForBindings;
-          if (scopeDirective && controllers[scopeDirective.name]) {
+          if (scopeDirective && elementControllers[scopeDirective.name]) {
             bindings = scopeDirective.$$bindings.bindToController;
-            controller = controllers[scopeDirective.name];
+            controller = elementControllers[scopeDirective.name];
 
             if (controller && controller.identifier && bindings) {
               controllerForBindings = controller;
@@ -1970,18 +1984,20 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
                                               bindings, scopeDirective);
             }
           }
-          forEach(controllers, function(controller) {
-            var result = controller();
-            if (result !== controller.instance &&
-                controller === controllerForBindings) {
-              // Remove and re-install bindToController bindings
-              thisLinkFn.$$destroyBindings();
-              thisLinkFn.$$destroyBindings =
-                  initializeDirectiveBindings(scope, attrs, result,
-                                              bindings, scopeDirective);
+          for (i in elementControllers) {
+            controller = elementControllers[i];
+            var controllerResult = controller();
+            if (controllerResult !== controller.instance) {
+              controller.instance = controllerResult;
+              $element.data('$' + directive.name + 'Controller', controllerResult);
+              if (controller === controllerForBindings) {
+                // Remove and re-install bindToController bindings
+                thisLinkFn.$$destroyBindings();
+                thisLinkFn.$$destroyBindings =
+                  initializeDirectiveBindings(scope, attrs, controllerResult, bindings, scopeDirective);
+              }
             }
-          });
-          controllers = null;
+          }
         }
 
         // PRELINKING
