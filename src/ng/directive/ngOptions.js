@@ -32,8 +32,9 @@ var ngOptionsMinErr = minErr('ngOptions');
  * option. See example below for demonstration.
  *
  * <div class="alert alert-warning">
- * **Note:** `ngModel` compares by reference, not value. This is important when binding to an
- * array of objects. See an example [in this jsfiddle](http://jsfiddle.net/qWzTb/).
+ * **Note:** By default, `ngModel` compares by reference, not value. This is important when binding to an
+ * array of objects. See an example [in this jsfiddle](http://jsfiddle.net/qWzTb/). When using `track by`
+ * in an `ngOptions` expression, however, deep equality checks will be performed.
  * </div>
  *
  * ## `select` **`as`**
@@ -147,37 +148,40 @@ var ngOptionsMinErr = minErr('ngOptions');
         <div ng-controller="ExampleController">
           <ul>
             <li ng-repeat="color in colors">
-              Name: <input ng-model="color.name">
-              <input type="checkbox" ng-model="color.notAnOption"> Disabled?
-              [<a href ng-click="colors.splice($index, 1)">X</a>]
+              <label>Name: <input ng-model="color.name"></label>
+              <label><input type="checkbox" ng-model="color.notAnOption"> Disabled?</label>
+              <button ng-click="colors.splice($index, 1)" aria-label="Remove">X</button>
             </li>
             <li>
-              [<a href ng-click="colors.push({})">add</a>]
+              <button ng-click="colors.push({})">add</button>
             </li>
           </ul>
           <hr/>
-          Color (null not allowed):
-          <select ng-model="myColor" ng-options="color.name for color in colors"></select><br>
-
-          Color (null allowed):
+          <label>Color (null not allowed):
+            <select ng-model="myColor" ng-options="color.name for color in colors"></select>
+          </label><br/>
+          <label>Color (null allowed):
           <span  class="nullable">
             <select ng-model="myColor" ng-options="color.name for color in colors">
               <option value="">-- choose color --</option>
             </select>
-          </span><br/>
+          </span></label><br/>
 
-          Color grouped by shade:
-          <select ng-model="myColor" ng-options="color.name group by color.shade for color in colors">
-          </select><br/>
+          <label>Color grouped by shade:
+            <select ng-model="myColor" ng-options="color.name group by color.shade for color in colors">
+            </select>
+          </label><br/>
 
-          Color grouped by shade, with some disabled:
-          <select ng-model="myColor"
+          <label>Color grouped by shade, with some disabled:
+            <select ng-model="myColor"
                   ng-options="color.name group by color.shade disable when color.notAnOption for color in colors">
-          </select><br/>
+            </select>
+          </label><br/>
 
 
 
-          Select <a href ng-click="myColor = { name:'not in list', shade: 'other' }">bogus</a>.<br>
+          Select <button ng-click="myColor = { name:'not in list', shade: 'other' }">bogus</button>.
+          <br/>
           <hr/>
           Currently selected: {{ {selected_color:myColor} }}
           <div style="border:solid 1px black; height:20px"
@@ -275,6 +279,7 @@ var ngOptionsDirective = ['$compile', '$parse', function($compile, $parse) {
     }
 
     return {
+      trackBy: trackBy,
       getWatchables: $parse(valuesFn, function(values) {
         // Create a collection of things that we would like to watch (watchedArray)
         // so that they can all be watched using a single $watchCollection
@@ -500,8 +505,9 @@ var ngOptionsDirective = ['$compile', '$parse', function($compile, $parse) {
 
       // We also need to watch to see if the internals of the model changes, since
       // ngModel only watches for object identity change
-      scope.$watch(attr.ngModel, function() { ngModelCtrl.$render(); }, true);
-
+      if (ngOptions.trackBy) {
+        scope.$watch(attr.ngModel, function() { ngModelCtrl.$render(); }, true);
+      }
       // ------------------------------------------------------------------ //
 
 
@@ -643,10 +649,13 @@ var ngOptionsDirective = ['$compile', '$parse', function($compile, $parse) {
         // Check to see if the value has changed due to the update to the options
         if (!ngModelCtrl.$isEmpty(previousValue)) {
           var nextValue = selectCtrl.readValue();
-          if (!equals(previousValue, nextValue)) {
+          if (ngOptions.trackBy && !equals(previousValue, nextValue) ||
+                previousValue !== nextValue) {
             ngModelCtrl.$setViewValue(nextValue);
+            ngModelCtrl.$render();
           }
         }
+
       }
 
     }
