@@ -45,7 +45,7 @@ describe("ngAnimate $animateCss", function() {
       duration: 10,
       to: { 'background': 'red' }
     });
-    expect(animator).toBeFalsy();
+    expect(animator.$$willAnimate).toBeFalsy();
   }));
 
   describe('when active', function() {
@@ -315,6 +315,96 @@ describe("ngAnimate $animateCss", function() {
           jqLite($document[0].body).append($rootElement);
           options = { event: 'enter', structural: true };
         }));
+
+        it("should always return an object even if no animation is detected",
+          inject(function($animateCss) {
+
+          ss.addRule('.some-animation', 'background:red;');
+
+          element.addClass('some-animation');
+          var animator = $animateCss(element, options);
+
+          expect(animator).toBeTruthy();
+          expect(isFunction(animator.start)).toBeTruthy();
+          expect(animator.end).toBeTruthy();
+          expect(animator.$$willAnimate).toBe(false);
+        }));
+
+        it("should close the animation immediately, but still return an animator object if no animation is detected",
+          inject(function($animateCss) {
+
+          ss.addRule('.another-fake-animation', 'background:blue;');
+
+          element.addClass('another-fake-animation');
+          var animator = $animateCss(element, {
+            event: 'enter',
+            structural: true
+          });
+
+          expect(element).not.toHaveClass('ng-enter');
+          expect(isFunction(animator.start)).toBeTruthy();
+        }));
+
+        they("should close the animation, but still accept $prop callbacks if no animation is detected",
+          ['done', 'then'], function(method) {
+
+          inject(function($animateCss, $$rAF, $rootScope) {
+            ss.addRule('.the-third-fake-animation', 'background:green;');
+
+            element.addClass('another-fake-animation');
+            var animator = $animateCss(element, {
+              event: 'enter',
+              structural: true
+            });
+
+            var done = false;
+            animator.start()[method](function() {
+              done = true;
+            });
+
+            expect(done).toBe(false);
+            $$rAF.flush();
+            if (method === 'then') {
+              $rootScope.$digest();
+            }
+            expect(done).toBe(true);
+          });
+        });
+
+        they("should close the animation, but still accept recognize runner.$prop if no animation is detected",
+          ['done(cancel)', 'catch'], function(method) {
+
+          inject(function($animateCss, $$rAF, $rootScope) {
+            ss.addRule('.the-third-fake-animation', 'background:green;');
+
+            element.addClass('another-fake-animation');
+            var animator = $animateCss(element, {
+              event: 'enter',
+              structural: true
+            });
+
+            var cancelled = false;
+            var runner = animator.start();
+
+            if (method === 'catch') {
+              runner.catch(function() {
+                cancelled = true;
+              });
+            } else {
+              runner.done(function(status) {
+                cancelled = status === false;
+              });
+            }
+
+            expect(cancelled).toBe(false);
+            runner.cancel();
+
+            if (method === 'catch') {
+              $rootScope.$digest();
+            }
+            expect(cancelled).toBe(true);
+          });
+        });
 
         it("should use the highest transition duration value detected in the CSS class", inject(function($animateCss) {
           ss.addRule('.ng-enter', 'transition:1s linear all;' +
@@ -1113,6 +1203,43 @@ describe("ngAnimate $animateCss", function() {
       });
     });
 
+    it('should avoid applying the same cache to an element a follow-up animation is run on the same element',
+      inject(function($animateCss, $rootElement, $document) {
+
+      function endTransition(element, elapsedTime) {
+        browserTrigger(element, 'transitionend',
+          { timeStamp: Date.now(), elapsedTime: elapsedTime });
+      }
+
+      function startAnimation(element, duration, color) {
+        $animateCss(element, {
+          duration: duration,
+          to: { background: color }
+        }).start();
+        triggerAnimationStartFrame();
+      }
+
+      var element = jqLite('<div></div>');
+      $rootElement.append(element);
+      jqLite($document[0].body).append($rootElement);
+
+      startAnimation(element, 0.5, 'red');
+      expect(element.attr('style')).toContain('transition');
+
+      endTransition(element, 0.5);
+      expect(element.attr('style')).not.toContain('transition');
+
+      startAnimation(element, 0.8, 'blue');
+      expect(element.attr('style')).toContain('transition');
+
+      // Trigger an extra transitionend event that matches the original transition
+      endTransition(element, 0.5);
+      expect(element.attr('style')).toContain('transition');
+
+      endTransition(element, 0.8);
+      expect(element.attr('style')).not.toContain('transition');
+    }));
+
     it('should apply a custom temporary class when a non-structural animation is used',
       inject(function($animateCss, $rootElement, $document) {
 
@@ -1602,8 +1729,10 @@ describe("ngAnimate $animateCss", function() {
             event: 'enter',
             structural: true
           };
+
           var animator = $animateCss(element, options);
-          expect(animator).toBeFalsy();
+
+          expect(animator.$$willAnimate).toBeFalsy();
         }));
 
         it("should apply a transition and keyframe duration directly if both transitions and keyframe classes are detected",
@@ -1667,7 +1796,7 @@ describe("ngAnimate $animateCss", function() {
           };
 
           var animator = $animateCss(element, options);
-          expect(animator).toBeFalsy();
+          expect(animator.$$willAnimate).toBeFalsy();
         }));
 
         it("should override the delay value present in the CSS class",
@@ -2075,7 +2204,7 @@ describe("ngAnimate $animateCss", function() {
           expect(element.css('width')).toBe('25px');
         }));
 
-        it("should apply the union of from and to styles to the element if no animation is run",
+        it("should apply the union of from and to styles to the element if no animation will be run",
           inject(function($animateCss, $rootElement) {
 
           var options = {
@@ -2087,7 +2216,9 @@ describe("ngAnimate $animateCss", function() {
 
           var animator = $animateCss(element, options);
 
-          expect(animator).toBeFalsy();
+          expect(animator.$$willAnimate).toBeFalsy();
+          animator.start();
+
           expect(element.css('width')).toBe('15px');
           expect(element.css('height')).toBe('50px');
         }));
@@ -2114,6 +2245,26 @@ describe("ngAnimate $animateCss", function() {
           expect(element).not.toHaveClass('ng-enter');
           expect(element.css('width')).toBe('5px');
           expect(element.css('height')).toBe('66px');
+        }));
+
+        it("should always apply the from styles before the start function is called even if no transition is detected when started",
+          inject(function($animateCss, $rootElement) {
+
+          ss.addRule('.my-class', 'transition: 0s linear color');
+
+          var options = {
+            addClass: 'my-class',
+            from: { height: '26px' },
+            to: { height: '500px' }
+          };
+
+          var animator = $animateCss(element, options);
+          expect(element.css('height')).toBe('26px');
+
+          animator.start();
+          triggerAnimationStartFrame();
+
+          expect(element.css('height')).toBe('500px');
         }));
 
         it("should apply an inline transition if [to] styles and a duration are provided",
@@ -2220,7 +2371,7 @@ describe("ngAnimate $animateCss", function() {
           };
 
           var animator = $animateCss(element, options);
-          expect(animator).toBeFalsy();
+          expect(animator.$$willAnimate).toBeFalsy();
         }));
 
         it("should apply a transition if [from] styles are provided with a class that is added",
@@ -2245,7 +2396,7 @@ describe("ngAnimate $animateCss", function() {
           };
 
           var animator = $animateCss(element, options);
-          expect(animator).toBeTruthy();
+          expect(animator.$$willAnimate).toBeTruthy();
         }));
 
         it("should not apply an inline transition if no styles are provided",
@@ -2259,7 +2410,7 @@ describe("ngAnimate $animateCss", function() {
           };
 
           var animator = $animateCss(element, options);
-          expect(animator).toBeFalsy();
+          expect(animator.$$willAnimate).toBeFalsy();
         }));
 
         it("should apply a transition duration if the existing transition duration's property value is not 'all'",
@@ -2417,10 +2568,11 @@ describe("ngAnimate $animateCss", function() {
                              '</svg>');
         var child = element.find('rect');
 
-        $animateCss(child, {
+        var animator = $animateCss(child, {
           removeClass: 'class-of-doom',
           duration: 0
         });
+        animator.start();
 
         var className = child[0].getAttribute('class');
         expect(className).toBe('');

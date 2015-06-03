@@ -16,6 +16,7 @@ var isElement   = angular.isElement;
 var ELEMENT_NODE = 1;
 var COMMENT_NODE = 8;
 
+var NG_ANIMATE_CLASSNAME = 'ng-animate';
 var NG_ANIMATE_CHILDREN_DATA = '$$ngAnimateChildren';
 
 var isPromiseLike = function(p) {
@@ -72,18 +73,29 @@ function removeFromArray(arr, val) {
 }
 
 function stripCommentsFromElement(element) {
+  if (element instanceof jqLite) {
+    switch (element.length) {
+      case 0:
+        return [];
+        break;
+
+      case 1:
+        // there is no point of stripping anything if the element
+        // is the only element within the jqLite wrapper.
+        // (it's important that we retain the element instance.)
+        if (element[0].nodeType === ELEMENT_NODE) {
+          return element;
+        }
+        break;
+
+      default:
+        return jqLite(extractElementNode(element));
+        break;
+    }
+  }
+
   if (element.nodeType === ELEMENT_NODE) {
     return jqLite(element);
-  }
-  if (element.length === 0) return [];
-
-  // there is no point of stripping anything if the element
-  // is the only element within the jqLite wrapper.
-  // (it's important that we retain the element instance.)
-  if (element.length === 1) {
-    return element[0].nodeType === ELEMENT_NODE && element;
-  } else {
-    return jqLite(extractElementNode(element));
   }
 }
 
@@ -233,4 +245,8 @@ function resolveElementClasses(existing, toAdd, toRemove) {
   }
 
   return classes;
+}
+
+function getDomNode(element) {
+  return (element instanceof angular.element) ? element[0] : element;
 }

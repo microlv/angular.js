@@ -39,16 +39,11 @@
  *   return {
  *     enter: function(element, doneFn) {
  *       var height = element[0].offsetHeight;
- *       var animation = $animateCss(element, {
+ *       return $animateCss(element, {
  *         from: { height:'0px' },
  *         to: { height:height + 'px' },
  *         duration: 1 // one second
  *       });
- *
- *       // if no possible animation can be triggered due
- *       // to the combination of options then `animation`
- *       // will be returned as undefined
- *       animation.start().done(doneFn);
  *     }
  *   }
  * }]);
@@ -71,18 +66,13 @@
  *   return {
  *     enter: function(element, doneFn) {
  *       var height = element[0].offsetHeight;
- *       var animation = $animateCss(element, {
+ *       return $animateCss(element, {
  *         addClass: 'red large-text pulse-twice',
  *         easing: 'ease-out',
  *         from: { height:'0px' },
  *         to: { height:height + 'px' },
  *         duration: 1 // one second
  *       });
- *
- *       // if no possible animation can be triggered due
- *       // to the combination of options then `animation`
- *       // will be returned as undefined
- *       animation.start().done(doneFn);
  *     }
  *   }
  * }]);
@@ -122,10 +112,11 @@
  * styles using the `from` and `to` properties.
  *
  * ```js
- * var animation = $animateCss(element, {
+ * var animator = $animateCss(element, {
  *   from: { background:'red' },
  *   to: { background:'blue' }
  * });
+ * animator.start();
  * ```
  *
  * ```css
@@ -158,10 +149,10 @@
  * added and removed on the element). Once `$animateCss` is called it will return an object with the following properties:
  *
  * ```js
- * var animation = $animateCss(element, { ... });
+ * var animator = $animateCss(element, { ... });
  * ```
  *
- * Now what do the contents of our `animation` variable look like:
+ * Now what do the contents of our `animator` variable look like:
  *
  * ```js
  * {
@@ -178,26 +169,14 @@
  * applied to the element during the preparation phase). Note that all other properties such as duration, delay, transitions and keyframes are just properties
  * and that changing them will not reconfigure the parameters of the animation.
  *
- * By calling `animation.start()` we do get back a promise, however, due to the nature of animations we may not want to tap into the default behaviour of
- * animations (since they cause a digest to occur which may slow down the animation performance-wise). Therefore instead of calling `then` to capture when
- * the animation ends be sure to call `done(callback)` (this is the recommended way to use `$animateCss` within JavaScript-animations).
+ * ### runner.done() vs runner.then()
+ * It is documented that `animation.start()` will return a promise object and this is true, however, there is also an additional method available on the
+ * runner called `.done(callbackFn)`. The done method works the same as `.finally(callbackFn)`, however, it does **not trigger a digest to occur**.
+ * Therefore, for performance reasons, it's always best to use `runner.done(callback)` instead of `runner.then()`, `runner.catch()` or `runner.finally()`
+ * unless you really need a digest to kick off afterwards.
  *
- * The example below should put this into perspective:
- *
- * ```js
- * var animation = $animateCss(element, { ... });
- *
- * // remember that if there is no CSS animation detected on the element
- * // then the value returned from $animateCss will be null
- * if (animation) {
- *   animation.start().done(function() {
- *     // yaay the animation is over
- *     doneCallback();
- *   });
- * } else {
- *   doneCallback();
- * }
- * ```
+ * Keep in mind that, to make this easier, ngAnimate has tweaked the JS animations API to recognize when a runner instance is returned from $animateCss
+ * (so there is no need to call `runner.done(doneFn)` inside of your JavaScript animation code). Check the [animation code above](#usage) to see how this works.
  *
  * @param {DOMElement} element the element that will be animated
  * @param {object} options the animation-related options that will be applied during the animation
@@ -223,7 +202,7 @@
  * `stagger` option value of `0.1` is used then there will be a stagger delay of `600ms`)
  * `applyClassesEarly` - Whether or not the classes being added or removed will be used when detecting the animation. This is set by `$animate` when enter/leave/move animations are fired to ensure that the CSS classes are resolved in time. (Note that this will prevent any transitions from occuring on the classes being added and removed.)
  *
- * @return {null|object} an object with a start method and details about the animation. If no animation is detected then a value of `null` will be returned.
+ * @return {object} an object with start and end methods and details about the animation.
  *
  * * `start` - The method to start the animation. This will return a `Promise` when called.
  * * `end` - This method will cancel the animation and remove all applied CSS classes and styles.
@@ -413,9 +392,9 @@ var $AnimateCssProvider = ['$animateProvider', function($animateProvider) {
   var gcsStaggerLookup = createLocalCacheLookup();
 
   this.$get = ['$window', '$$jqLite', '$$AnimateRunner', '$timeout',
-               '$document', '$sniffer', '$$rAF',
+               '$document', '$sniffer', '$$rAFScheduler',
        function($window,   $$jqLite,   $$AnimateRunner,   $timeout,
-                $document,   $sniffer,   $$rAF) {
+                $document,   $sniffer,   $$rAFScheduler) {
 
     var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
 
@@ -472,16 +451,11 @@ var $AnimateCssProvider = ['$animateProvider', function($animateProvider) {
       return stagger || {};
     }
 
-    var bod = $document[0].body;
-    var cancelLastRAFRequest;
+    var bod = getDomNode($document).body;
     var rafWaitQueue = [];
     function waitUntilQuiet(callback) {
-      if (cancelLastRAFRequest) {
-        cancelLastRAFRequest(); //cancels the request
-      }
       rafWaitQueue.push(callback);
-      cancelLastRAFRequest = $$rAF(function() {
-        cancelLastRAFRequest = null;
+      $$rAFScheduler.waitUntilQuiet(function() {
         gcsLookup.flush();
         gcsStaggerLookup.flush();
 
@@ -494,9 +468,12 @@ var $AnimateCssProvider = ['$animateProvider', function($animateProvider) {
         //WILL RESULT IN AN UNPREDICTABLE BUG THAT IS VERY HARD TO TRACK DOWN AND
         //WILL TAKE YEARS AWAY FROM YOUR LIFE.
         var width = bod.offsetWidth + 1;
-        forEach(rafWaitQueue, function(cb) {
-          cb(width);
-        });
+
+        // we use a for loop to ensure that if the queue is changed
+        // during this looping then it will consider new requests
+        for (var i = 0; i < rafWaitQueue.length; i++) {
+          rafWaitQueue[i](width);
+        }
         rafWaitQueue.length = 0;
       });
     }
@@ -518,7 +495,7 @@ var $AnimateCssProvider = ['$animateProvider', function($animateProvider) {
     }
 
     function init(element, options) {
-      var node = element[0];
+      var node = getDomNode(element);
       options = prepareAnimationOptions(options);
 
       var temporaryStyles = [];
@@ -535,8 +512,7 @@ var $AnimateCssProvider = ['$animateProvider', function($animateProvider) {
       var maxDurationTime;
 
       if (options.duration === 0 || (!$sniffer.animations && !$sniffer.transitions)) {
-        close();
-        return;
+        return closeAndReturnNoopAnimator();
       }
 
       var method = options.event && isArray(options.event)
@@ -583,8 +559,7 @@ var $AnimateCssProvider = ['$animateProvider', function($animateProvider) {
       // there is no way we can trigger an animation since no styles and
       // no classes are being applied which would then trigger a transition
       if (!hasToStyles && !setupClasses) {
-        close();
-        return false;
+        return closeAndReturnNoopAnimator();
       }
 
       var cacheKey, stagger;
@@ -679,14 +654,13 @@ var $AnimateCssProvider = ['$animateProvider', function($animateProvider) {
       }
 
       if (maxDuration === 0 && !flags.recalculateTimingStyles) {
-        close();
-        return false;
+        return closeAndReturnNoopAnimator();
       }
 
       // we need to recalculate the delay value since we used a pre-emptive negative
       // delay value and the delay value is required for the final event checking. This
       // property will ensure that this will happen after the RAF phase has passed.
-      if (timings.transitionDuration > 0) {
+      if (options.duration == null && timings.transitionDuration > 0) {
         flags.recalculateTimingStyles = flags.recalculateTimingStyles || isFirst;
       }
 
@@ -699,9 +673,8 @@ var $AnimateCssProvider = ['$animateProvider', function($animateProvider) {
                                        stagger.animationDuration === 0;
       }
 
-      if (flags.blockTransition) {
-        applyAnimationFromStyles(element, options);
-      } else {
+      applyAnimationFromStyles(element, options);
+      if (!flags.blockTransition) {
         blockTransitions(node, false);
       }
 
@@ -709,6 +682,7 @@ var $AnimateCssProvider = ['$animateProvider', function($animateProvider) {
 
       // TODO(matsko): for 1.5 change this code to have an animator object for better debugging
       return {
+        $$willAnimate: true,
         end: endFn,
         start: function() {
           if (animationClosed) return;
@@ -786,6 +760,23 @@ var $AnimateCssProvider = ['$animateProvider', function($animateProvider) {
         if (flags.blockKeyframeAnimation) {
           blockKeyframeAnimations(node, !!duration);
         }
+      }
+
+      function closeAndReturnNoopAnimator() {
+        runner = new $$AnimateRunner({
+          end: endFn,
+          cancel: cancelFn
+        });
+
+        close();
+
+        return {
+          $$willAnimate: false,
+          start: function() {
+            return runner;
+          },
+          end: endFn
+        };
       }
 
       function start() {

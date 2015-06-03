@@ -57,6 +57,31 @@ describe('$aria', function() {
       scope.$apply('val = true');
       expect(element.attr('aria-hidden')).toBe('userSetValue');
     });
+
+    it('should always set aria-hidden to a boolean value', function() {
+      compileElement('<div ng-hide="val"></div>');
+
+      scope.$apply('val = "test angular"');
+      expect(element.attr('aria-hidden')).toBe('true');
+
+      scope.$apply('val = null');
+      expect(element.attr('aria-hidden')).toBe('false');
+
+      scope.$apply('val = {}');
+      expect(element.attr('aria-hidden')).toBe('true');
+
+
+      compileElement('<div ng-show="val"></div>');
+
+      scope.$apply('val = "test angular"');
+      expect(element.attr('aria-hidden')).toBe('false');
+
+      scope.$apply('val = null');
+      expect(element.attr('aria-hidden')).toBe('true');
+
+      scope.$apply('val = {}');
+      expect(element.attr('aria-hidden')).toBe('false');
+    });
   });
 
 
@@ -318,6 +343,20 @@ describe('$aria', function() {
 
       scope.$apply('val = true');
       expectAriaAttrOnEachElement(element, 'aria-disabled', 'userSetValue');
+    });
+
+
+    it('should always set aria-disabled to a boolean value', function() {
+      compileElement('<div ng-disabled="val"></div>');
+
+      scope.$apply('val = "test angular"');
+      expect(element.attr('aria-disabled')).toBe('true');
+
+      scope.$apply('val = null');
+      expect(element.attr('aria-disabled')).toBe('false');
+
+      scope.$apply('val = {}');
+      expect(element.attr('aria-disabled')).toBe('true');
     });
   });
 
@@ -598,7 +637,7 @@ describe('$aria', function() {
 
     var clickFn;
 
-    it('should a trigger click from the keyboard', function() {
+    it('should trigger a click from the keyboard', function() {
       scope.someAction = function() {};
 
       var elements = $compile('<section>' +
@@ -615,6 +654,28 @@ describe('$aria', function() {
 
       divElement.triggerHandler({type: 'keypress', keyCode: 32});
       liElement.triggerHandler({type: 'keypress', keyCode: 32});
+
+      expect(clickFn).toHaveBeenCalledWith('div');
+      expect(clickFn).toHaveBeenCalledWith('li');
+    });
+
+    it('should trigger a click in browsers that provide event.which instead of event.keyCode', function() {
+      scope.someAction = function() {};
+
+      var elements = $compile('<section>' +
+      '<div class="div-click" ng-click="someAction(\'div\')" tabindex="0"></div>' +
+      '<ul><li ng-click="someAction( \'li\')" tabindex="0"></li></ul>' +
+      '</section>')(scope);
+
+      scope.$digest();
+
+      clickFn = spyOn(scope, 'someAction');
+
+      var divElement = elements.find('div');
+      var liElement = elements.find('li');
+
+      divElement.triggerHandler({type: 'keypress', which: 32});
+      liElement.triggerHandler({type: 'keypress', which: 32});
 
       expect(clickFn).toHaveBeenCalledWith('div');
       expect(clickFn).toHaveBeenCalledWith('li');

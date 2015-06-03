@@ -148,6 +148,27 @@ describe("animations", function() {
       });
     });
 
+    it('should throw a minErr if a regex value is used which partially contains or fully matches the `ng-animate` CSS class', function() {
+      module(function($animateProvider) {
+        assertError(/ng-animate/, true);
+        assertError(/first ng-animate last/, true);
+        assertError(/ng-animate-special/, false);
+        assertError(/first ng-animate-special last/, false);
+        assertError(/first ng-animate ng-animate-special last/, true);
+
+        function assertError(regex, bool) {
+          var expectation = expect(function() {
+            $animateProvider.classNameFilter(regex);
+          });
+
+          var message = '$animateProvider.classNameFilter(regex) prohibits accepting a regex value which matches/contains the "ng-animate" CSS class.';
+
+          bool ? expectation.toThrowMinErr('$animate', 'nongcls', message)
+               : expectation.not.toThrowMinErr('$animate', 'nongcls', message);
+        }
+      });
+    });
+
     it('should complete the leave DOM operation in case the classNameFilter fails', function() {
       module(function($animateProvider) {
         $animateProvider.classNameFilter(/memorable-animation/);
@@ -243,6 +264,47 @@ describe("animations", function() {
       $rootScope.$digest();
 
       expect(capturedAnimation).toBeFalsy();
+    }));
+
+    it('should not attempt to perform an animation on a text node element',
+      inject(function($rootScope, $animate) {
+
+      element.html('hello there');
+      var textNode = jqLite(element[0].firstChild);
+
+      $animate.addClass(textNode, 'some-class');
+      $rootScope.$digest();
+
+      expect(capturedAnimation).toBeFalsy();
+    }));
+
+    it('should perform the leave domOperation if a text node is used',
+      inject(function($rootScope, $animate) {
+
+      element.html('hello there');
+      var textNode = jqLite(element[0].firstChild);
+      var parentNode = textNode[0].parentNode;
+
+      $animate.leave(textNode);
+      $rootScope.$digest();
+      expect(capturedAnimation).toBeFalsy();
+      expect(textNode[0].parentNode).not.toBe(parentNode);
+    }));
+
+    it('should perform the leave domOperation if a comment node is used',
+      inject(function($rootScope, $animate, $document) {
+
+      var doc = $document[0];
+
+      element.html('hello there');
+      var commentNode = jqLite(doc.createComment('test comment'));
+      var parentNode = element[0];
+      parentNode.appendChild(commentNode[0]);
+
+      $animate.leave(commentNode);
+      $rootScope.$digest();
+      expect(capturedAnimation).toBeFalsy();
+      expect(commentNode[0].parentNode).not.toBe(parentNode);
     }));
 
     it('enter() should issue an enter animation and fire the DOM operation right away before the animation kicks off', inject(function($animate, $rootScope) {
@@ -528,6 +590,32 @@ describe("animations", function() {
 
         expect(parent).toHaveClass('abc');
         expect(itsOver).toBe(true);
+      }));
+
+      it('should immediately end a parent class-based form animation if a structural child is active',
+        inject(function($rootScope, $animate, $rootElement, $$rAF, $$AnimateRunner) {
+
+        parent.remove();
+        element.remove();
+
+        parent = jqLite('<form></form>');
+        $rootElement.append(parent);
+
+        element = jqLite('<input type="text" name="myInput" />');
+
+        $animate.addClass(parent, 'abc');
+        $rootScope.$digest();
+
+        // we do this since the old runner was already closed
+        overriddenAnimationRunner = new $$AnimateRunner();
+
+        $animate.enter(element, parent);
+        $rootScope.$digest();
+
+        $$rAF.flush();
+
+        expect(parent.attr('data-ng-animate')).toBeFalsy();
+        expect(element.attr('data-ng-animate')).toBeTruthy();
       }));
 
       it('should not end a pre-digest parent animation if it does not have any classes to add/remove',
@@ -876,6 +964,59 @@ describe("animations", function() {
         expect(enterComplete).toBe(true);
       }));
 
+      it('should cancel the previous structural animation if a follow-up structural animation takes over before the postDigest',
+        inject(function($animate, $$rAF) {
+
+        var enterDone = jasmine.createSpy('enter animation done');
+        $animate.enter(element, parent).done(enterDone);
+        expect(enterDone).not.toHaveBeenCalled();
+
+        $animate.leave(element);
+        $$rAF.flush();
+        expect(enterDone).toHaveBeenCalled();
+      }));
+
+      it('should cancel the previously running addClass animation if a follow-up removeClass animation is using the same class value',
+        inject(function($animate, $rootScope, $$rAF) {
+
+        parent.append(element);
+        var runner = $animate.addClass(element, 'active-class');
+        $rootScope.$digest();
+
+        var doneHandler = jasmine.createSpy('addClass done');
+        runner.done(doneHandler);
+
+        $$rAF.flush();
+
+        expect(doneHandler).not.toHaveBeenCalled();
+
+        $animate.removeClass(element, 'active-class');
+        $rootScope.$digest();
+
+        expect(doneHandler).toHaveBeenCalled();
+      }));
+
+      it('should cancel the previously running removeClass animation if a follow-up addClass animation is using the same class value',
+        inject(function($animate, $rootScope, $$rAF) {
+
+        element.addClass('active-class');
+        parent.append(element);
+        var runner = $animate.removeClass(element, 'active-class');
+        $rootScope.$digest();
+
+        var doneHandler = jasmine.createSpy('addClass done');
+        runner.done(doneHandler);
+
+        $$rAF.flush();
+
+        expect(doneHandler).not.toHaveBeenCalled();
+
+        $animate.addClass(element, 'active-class');
+        $rootScope.$digest();
+
+        expect(doneHandler).toHaveBeenCalled();
+      }));
+
       it('should skip the class-based animation entirely if there is an active structural animation',
         inject(function($animate, $rootScope) {
 
@@ -901,6 +1042,22 @@ describe("animations", function() {
         $rootScope.$digest();
 
         expect(runner1).not.toBe(runner2);
+      }));
+
+      it('should properly cancel out animations when the same class is added/removed within the same digest',
+        inject(function($animate, $rootScope) {
+
+        parent.append(element);
+        $animate.addClass(element, 'red');
+        $animate.removeClass(element, 'red');
+        $rootScope.$digest();
+
+        expect(capturedAnimation).toBeFalsy();
+
+        $animate.addClass(element, 'blue');
+        $rootScope.$digest();
+
+        expect(capturedAnimation[2].addClass).toBe('blue');
       }));
     });
 
@@ -1009,12 +1166,20 @@ describe("animations", function() {
       it('class-based animations, however it should also cancel former structural animations in the process',
         inject(function($animate, $rootScope) {
 
-        element.addClass('green');
+        element.addClass('green lime');
 
         $animate.enter(element, parent);
         $animate.addClass(element, 'red');
         $animate.removeClass(element, 'green');
+
         $animate.leave(element);
+        $animate.addClass(element, 'pink');
+        $animate.removeClass(element, 'lime');
+
+        expect(element).toHaveClass('red');
+        expect(element).not.toHaveClass('green');
+        expect(element).not.toHaveClass('pink');
+        expect(element).toHaveClass('lime');
 
         $rootScope.$digest();
 
@@ -1025,8 +1190,8 @@ describe("animations", function() {
         expect(element.parent()[0]).toEqual(parent[0]);
 
         options = capturedAnimation[2];
-        expect(options.addClass).toEqual('red');
-        expect(options.removeClass).toEqual('green');
+        expect(options.addClass).toEqual('pink');
+        expect(options.removeClass).toEqual('lime');
       }));
 
       it('should retain the instance to the very first runner object when multiple element-level animations are issued',

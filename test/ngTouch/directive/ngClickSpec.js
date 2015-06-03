@@ -125,7 +125,7 @@ describe('ngClick (touch)', function() {
   }));
 
 
-  it('should not click if a touchmove comes before touchend', inject(function($rootScope, $compile, $rootElement) {
+  it('should not prevent click if a touchmove comes before touchend', inject(function($rootScope, $compile, $rootElement) {
     element = $compile('<div ng-click="tapped = true"></div>')($rootScope);
     $rootElement.append(element);
     $rootScope.$digest();
@@ -140,11 +140,11 @@ describe('ngClick (touch)', function() {
     browserTrigger(element, 'touchmove');
     browserTrigger(element, 'touchend',{
       keys: [],
-      x: 400,
-      y: 400
+      x: 15,
+      y: 15
     });
 
-    expect($rootScope.tapped).toBeUndefined();
+    expect($rootScope.tapped).toEqual(true);
   }));
 
   it('should add the CSS class while the element is held down, and then remove it', inject(function($rootScope, $compile, $rootElement) {
@@ -171,6 +171,18 @@ describe('ngClick (touch)', function() {
     expect($rootScope.tapped).toBe(true);
   }));
 
+  it('should click when target element is an SVG', inject(
+    function($rootScope, $compile, $rootElement) {
+      element = $compile('<svg ng-click="tapped = true"></svg>')($rootScope);
+      $rootElement.append(element);
+      $rootScope.$digest();
+
+      browserTrigger(element, 'touchstart');
+      browserTrigger(element, 'touchend');
+      browserTrigger(element, 'click', {x:1, y:1});
+
+      expect($rootScope.tapped).toEqual(true);
+  }));
 
   describe('the clickbuster', function() {
     var element1, element2;

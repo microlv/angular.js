@@ -1,3 +1,294 @@
+<a name="1.4.0"></a>
+# 1.4.0 jaracimrman-existence (2015-05-26)
+
+
+## Bug Fixes
+
+- **$animate:**
+  - ignore invalid option parameter values
+  ([72edd4df](https://github.com/angular/angular.js/commit/72edd4dff931c644eecb8f0d1c878dc839c76947),
+   [#11826](https://github.com/angular/angular.js/issues/11826))
+  - accept unwrapped DOM elements as inputs for enter + move
+  ([f26fc26f](https://github.com/angular/angular.js/commit/f26fc26f6ea283b2fc5ddb18627b13850de2663e),
+   [#11848](https://github.com/angular/angular.js/issues/11848))
+- **$animateCss:** ensure that custom durations do not confuse the gcs cache
+  ([e0e1b520](https://github.com/angular/angular.js/commit/e0e1b5208767dd62f5586fdc607cb2e31dac9516),
+   [#11723](https://github.com/angular/angular.js/issues/11723), [#11852](https://github.com/angular/angular.js/issues/11852))
+- **$http:** do not modify the config object passed into $http short methods
+  ([f7a4b481](https://github.com/angular/angular.js/commit/f7a4b48121ed2b04af89bd2b754f500d1872360d))
+- **ngAnimate:**
+  - close follow-up class-based animations when the same class is added/removed when removed/added
+  ([db246eb7](https://github.com/angular/angular.js/commit/db246eb701529b41049fc118908e528920f13b24),
+   [#11717](https://github.com/angular/angular.js/issues/11717))
+  - ensure nested class-based animations are spaced out with a RAF
+  ([213c2a70](https://github.com/angular/angular.js/commit/213c2a703293ee0af8229dde2b608687cd77ccfa),
+   [#11812](https://github.com/angular/angular.js/issues/11812))
+  - class-based animations must not set addClass/removeClass CSS classes on the element
+  ([3a3db690](https://github.com/angular/angular.js/commit/3a3db690a16e888aa7371e3b02e2954b9ec2d558),
+   [#11810](https://github.com/angular/angular.js/issues/11810))
+  - ensure that repeated structural calls during pre-digest function
+  ([2327f5a0](https://github.com/angular/angular.js/commit/2327f5a0a7e018a9b03aefabe1fbd0c9330e2eeb),
+   [#11867](https://github.com/angular/angular.js/issues/11867))
+  - ensure that cancelled class-based animations are properly cleaned up
+  ([718ff844](https://github.com/angular/angular.js/commit/718ff84405558ac64402e1fca5caefd7d307ea1e),
+   [#11652](https://github.com/angular/angular.js/issues/11652))
+  - throw an error if a callback is passed to animate methods
+  ([9bb4d6cc](https://github.com/angular/angular.js/commit/9bb4d6ccbe80b7704c6b7f53317ca8146bc103ca),
+   [#11826](https://github.com/angular/angular.js/issues/11826), [#11713](https://github.com/angular/angular.js/issues/11713))
+  - ensure anchored animations remove the leave element at correct time
+  ([64c66d0e](https://github.com/angular/angular.js/commit/64c66d0eea11b575d2a71d00c70cfc5be12cd450),
+   [#11850](https://github.com/angular/angular.js/issues/11850))
+- **select:** prevent unknown option being added to select when bound to null property
+  ([4090491c](https://github.com/angular/angular.js/commit/4090491c73910c169d4fba0494a4e26b45dca7ec),
+   [#11872](https://github.com/angular/angular.js/issues/11872), [#11875](https://github.com/angular/angular.js/issues/11875))
+
+
+## Features
+
+- **filterFilter:** allow array like objects to be filtered
+  ([1b0d0fd8](https://github.com/angular/angular.js/commit/1b0d0fd8d00b42dffd798845fe0947d594372613),
+   [#11782](https://github.com/angular/angular.js/issues/11782), [#11787](https://github.com/angular/angular.js/issues/11787))
+
+
+
+<a name="1.4.0-rc.2"></a>
+# 1.4.0-rc.2 rocket-zambonimation (2015-05-12)
+
+
+## Bug Fixes
+
+- **$compile:** ensure directive names have no leading or trailing whitespace
+  ([bab474aa](https://github.com/angular/angular.js/commit/bab474aa8b146f6732857c3af1a8b3b010fda8b0),
+   [#11397](https://github.com/angular/angular.js/issues/11397), [#11772](https://github.com/angular/angular.js/issues/11772))
+- **$httpParamSerializerJQLike:** follow jQuery logic for nested params
+  ([2420a0a7](https://github.com/angular/angular.js/commit/2420a0a77e27b530dbb8c41319b2995eccf76791),
+   [#11551](https://github.com/angular/angular.js/issues/11551), [#11635](https://github.com/angular/angular.js/issues/11635))
+- **jqLite:** check for "length" in obj in isArrayLike to prevent iOS8 JIT bug from surfacing
+  ([426a5ac0](https://github.com/angular/angular.js/commit/426a5ac0547109648e5c5e358f668c274a111ab2),
+   [#11508](https://github.com/angular/angular.js/issues/11508))
+- **ngAnimate:**
+  - ensure that multiple requests to requestAnimationFrame are buffered
+  ([db20b830](https://github.com/angular/angular.js/commit/db20b830fc6074a00dc11d3f47d665c55e8bb515),
+   [#11791](https://github.com/angular/angular.js/issues/11791))
+  - ensure that an object is always returned even when no animation is set to run
+  ([d5683d21](https://github.com/angular/angular.js/commit/d5683d21165e725bc5a850e795f681b0a8a008f5))
+  - force use of `ng-anchor` instead of a suffixed `-anchor` CSS class when triggering anchor animations
+  ([df24410c](https://github.com/angular/angular.js/commit/df24410c17d51a8d44929b9cffee2c91cedfed72))
+  - rename `ng-animate-anchor` to `ng-anchor`
+  ([e6d053de](https://github.com/angular/angular.js/commit/e6d053de0993c0d38de46ad8a9c6760537316430))
+  - ensure that shared CSS classes between anchor nodes are retained
+  ([e0014002](https://github.com/angular/angular.js/commit/e0014002370278778077d0612f9fab6beb80d07a),
+   [#11681](https://github.com/angular/angular.js/issues/11681))
+  - prohibit usage of the `ng-animate` class with classNameFilter
+  ([1002b80a](https://github.com/angular/angular.js/commit/1002b80a6fb5d98c424a01330234276d65d93c0b),
+   [#11431](https://github.com/angular/angular.js/issues/11431), [#11807](https://github.com/angular/angular.js/issues/11807))
+  - ensure that the temporary CSS classes are applied before detection
+  ([f7e9ff1a](https://github.com/angular/angular.js/commit/f7e9ff1aba9ed70835c084e6e154f6b0bf9c3a19),
+   [#11769](https://github.com/angular/angular.js/issues/11769), [#11804](https://github.com/angular/angular.js/issues/11804))
+  - ensure that all jqLite elements are deconstructed properly
+  ([64d05180](https://github.com/angular/angular.js/commit/64d05180a667e586328fbdbd328889d3b003571d),
+   [#11658](https://github.com/angular/angular.js/issues/11658))
+  - ensure animations are not attempted on text nodes
+  ([2aacc2d6](https://github.com/angular/angular.js/commit/2aacc2d622893e05eb94b3974d562e681cc3a17f),
+   [#11703](https://github.com/angular/angular.js/issues/11703))
+  - ensure JS animations recognize $animateCss directly
+  ([0681a540](https://github.com/angular/angular.js/commit/0681a5400e4150a961f9c8651e55623ca23b0cc2))
+- **ngClass:** add/remove classes which are properties of Object.prototype
+  ([f7b99970](https://github.com/angular/angular.js/commit/f7b999703f4f3bdaea035ce692f1a656b0c1a933),
+   [#11813](https://github.com/angular/angular.js/issues/11813), [#11814](https://github.com/angular/angular.js/issues/11814))
+- **ngOptions:**
+  - ensure that tracked properties are always watched
+  ([b5a9053b](https://github.com/angular/angular.js/commit/b5a9053ba33d48db2482ca6736d1fcae8b33d0f8),
+   [#11784](https://github.com/angular/angular.js/issues/11784))
+  - ensure label is watched in all cases
+  ([ae98dadf](https://github.com/angular/angular.js/commit/ae98dadf6dca3313746f42a441c7659654dd9d50),
+   [#11765](https://github.com/angular/angular.js/issues/11765))
+  - iterate over the options collection in the same way as `ngRepeat`
+  ([dfa722a8](https://github.com/angular/angular.js/commit/dfa722a8a6864793fd9580d8ae704a06d10b5509),
+   [#11733](https://github.com/angular/angular.js/issues/11733))
+  - use watchCollection not deep watch of ngModel
+  ([47f9fc3e](https://github.com/angular/angular.js/commit/47f9fc3e70bc361e8c11fe68dc3ec4489238efb3),
+   [#11372](https://github.com/angular/angular.js/issues/11372), [#11653](https://github.com/angular/angular.js/issues/11653), [#11743](https://github.com/angular/angular.js/issues/11743))
+- **ngTouch:**
+  - check undefined tagName for SVG event target
+  ([74eb17d7](https://github.com/angular/angular.js/commit/74eb17d7c8232f72f134bf2546f10fed7234d276))
+  - don't prevent click event after a touchmove
+  ([95521876](https://github.com/angular/angular.js/commit/95521876eb9eb330548b0549f0cfe22a26d88f6e),
+   [#10985](https://github.com/angular/angular.js/issues/10985))
+
+
+## Features
+
+- **$resource:** include request context in error message
+  ([266bc652](https://github.com/angular/angular.js/commit/266bc6520ba4d188dbc949643def102604f98905),
+   [#11363](https://github.com/angular/angular.js/issues/11363))
+
+
+## Breaking Changes
+
+### ngAnimate
+
+- **$animateCss:** due to [d5683d21](https://github.com/angular/angular.js/commit/d5683d21165e725bc5a850e795f681b0a8a008f5),
+  The $animateCss service will now always return an
+object even if the animation is not set to run. If your code is using
+$animateCss then please consider the following code change:
+
+```
+// before
+var animator = $animateCss(element, { ... });
+if (!animator) {
+  continueApp();
+  return;
+}
+var runner = animator.start();
+runner.done(continueApp);
+runner.then(continueApp);
+
+// now
+var animator = $animateCss(element, { ... });
+var runner = animator.start();
+runner.done(continueApp);
+runner.then(continueApp);
+```
+
+- due to [df24410c](https://github.com/angular/angular.js/commit/df24410c17d51a8d44929b9cffee2c91cedfed72),
+Prior to this fix there were to ways to apply CSS
+animation code to an anchor animation. With this fix, the suffixed
+CSS -anchor classes are now not used anymore for CSS anchor animations.
+
+Instead just use the `ng-anchor` CSS class like so:
+
+```html
+<div class="container-animation" ng-if="on">
+   <div ng-animate-ref="1" class="my-anchor-element"></div>
+</div>
+
+<div class="container-animation" ng-if="!on">
+   <div ng-animate-ref="1" class="my-anchor-element"></div>
+</div>
+```
+
+**before**:
+```css
+/* before (notice the container-animation CSS class) */
+.container-animation-anchor {
+  transition:0.5s linear all;
+}
+```
+
+**now**:
+```css
+/* now (just use `ng-anchor` on a class that both the
+   elements that contain `ng-animate-ref` share) */
+.my-anchor-element.ng-anchor {
+  transition:0.5s linear all;
+}
+```
+
+- due to [e6d053de](https://github.com/angular/angular.js/commit/e6d053de0993c0d38de46ad8a9c6760537316430),
+if your CSS code made use of the `ng-animate-anchor`
+CSS class for referencing the anchored animation element then your
+code must now use `ng-anchor` instead.
+
+- due to [1002b80a](https://github.com/angular/angular.js/commit/1002b80a6fb5d98c424a01330234276d65d93c0b),
+partially or fully using a regex value containing
+`ng-animate` as a token is not allowed anymore. Doing so will trigger a
+minErr exception to be thrown.
+
+So don't do this:
+
+```js
+// only animate elements that contain the `ng-animate` CSS class
+$animateProvider.classNameFilter(/ng-animate/);
+
+// or partially contain it
+$animateProvider.classNameFilter(/some-class ng-animate another-class/);
+```
+
+but this is OK:
+
+```js
+$animateProvider.classNameFilter(/ng-animate-special/);
+```
+
+
+### ngOptions
+
+- ** due to [dfa722a8](https://github.com/angular/angular.js/commit/dfa722a8a6864793fd9580d8ae704a06d10b5509),
+
+
+Although it is unlikely that anyone is using it in this way, this change does change the
+behaviour of `ngOptions` in the following case:
+
+  * you are iterating over an array-like object, using the array form of the `ngOptions` syntax
+(`item.label for item in items`) and that object contains non-numeric property keys.
+
+In this case these properties with non-numeric keys will be ignored.
+
+** Here array-like is defined by the result of a call to this internal function:
+https://github.com/angular/angular.js/blob/v1.4.0-rc.1/src/Angular.js#L198-L211 **
+
+To get the desired behaviour you need to iterate using the object form of the `ngOptions` syntax
+(`value.label` for (key, value) in items)`).
+
+
+
+
+<a name="v1.4.0-rc.1"></a>
+# v1.4.0-rc.1 sartorial-chronography (2015-04-24)
+
+
+## Bug Fixes
+
+- **$animate:**
+  - ensure that from styles are applied for class-based animations
+  ([8f819d2c](https://github.com/angular/angular.js/commit/8f819d2cb5c8025b25534529a6e897dc8805885b))
+  - make sure the JS animation lookup is an object lookup
+  ([103a39ca](https://github.com/angular/angular.js/commit/103a39ca8dad0300bead15c358aad846510b2229),
+   [#11619](https://github.com/angular/angular.js/issues/11619))
+- **$animateCss:** ensure that rAF waiting loop doesn't ignore pending items during a flush
+  ([90e424b2](https://github.com/angular/angular.js/commit/90e424b206239e261024e8ef7fcac762236cd8b7))
+- **$http:** stop coercing falsy HTTP request bodies to null / empty body
+  ([e04a887c](https://github.com/angular/angular.js/commit/e04a887c9b506de18516600310fe6e529d9d2ca3),
+   [#11552](https://github.com/angular/angular.js/issues/11552), [#11593](https://github.com/angular/angular.js/issues/11593))
+- **ngAnimate:**
+  - close parent animations only when there are classes to resolve
+  ([1459be17](https://github.com/angular/angular.js/commit/1459be170dabfca40501dcf219dfced5ba513169))
+  - ensure ngClass-based classes are always resolved for CSS-enabled animations
+  ([89f081e4](https://github.com/angular/angular.js/commit/89f081e452e9a75c2d3bf86bfef8b7f9bd1f2b0e))
+  - do not abort animation if only `ng-anchor-in` is used
+  ([3333a5c3](https://github.com/angular/angular.js/commit/3333a5c380f830cba8efec5825cb6648f930f206))
+  - ensure that a filtered-out leave animation always runs its DOM operation
+  ([6dd64ab5](https://github.com/angular/angular.js/commit/6dd64ab5f34fa19db8f90e6eabc810843089ba14),
+   [#11555](https://github.com/angular/angular.js/issues/11555))
+  - ensure that animations work when the app is bootstrapped on the document node
+  ([bee14ed1](https://github.com/angular/angular.js/commit/bee14ed1e7b77ea7dc62326611380da36dec297e),
+   [#11574](https://github.com/angular/angular.js/issues/11574))
+  - ensure SVG classes are properly removed
+  ([fa0bbded](https://github.com/angular/angular.js/commit/fa0bbded1ea040fbfdb1a4339e4a374fe9717a82))
+- **ngAria:** change accessibility keypress event to use event.which if it is provided
+  ([249f9b81](https://github.com/angular/angular.js/commit/249f9b81cbad5c57cf978a47842744aadd85cdb4),
+   [#11340](https://github.com/angular/angular.js/issues/11340))
+- **ngMessageFormat:**
+  - ensure bindings are valid for Protractor
+  ([992114f7](https://github.com/angular/angular.js/commit/992114f7a7f5f39778753e0c49458f14b6290ffc),
+   [#11644](https://github.com/angular/angular.js/issues/11644), [#11649](https://github.com/angular/angular.js/issues/11649))
+  - minified symbol and nested required expression
+  ([8a45064f](https://github.com/angular/angular.js/commit/8a45064f2bdec13ba3de5b0a0785df76188ab172),
+   [#11414](https://github.com/angular/angular.js/issues/11414), [#11592](https://github.com/angular/angular.js/issues/11592))
+- **select:** allow empty option to be added dynamically by ng-repeat
+  ([abf59c28](https://github.com/angular/angular.js/commit/abf59c285c3ff6af20dbf4236eba5204ae735abb),
+   [#11470](https://github.com/angular/angular.js/issues/11470), [#11512](https://github.com/angular/angular.js/issues/11512))
+
+
+## Features
+
+- **$animate:** provide support for animations on elements outside of $rootElement
+  ([e41faaa2](https://github.com/angular/angular.js/commit/e41faaa2a155a42bcc66952497a6f33866878508))
+
+
+
+
 <a name="v1.4.0-rc.0"></a>
 # v1.4.0-rc.0 smooth-unwinding (2015-04-10)
 
@@ -4822,7 +5113,7 @@ For more info: http://blog.angularjs.org/2013/12/angularjs-13-new-release-approa
   - properly toggle multiple classes
   ([4e73c80b](https://github.com/angular/angular.js/commit/4e73c80b17bd237a8491782bcf9e19f1889e12ed),
    [#4467](https://github.com/angular/angular.js/issues/4467), [#6448](https://github.com/angular/angular.js/issues/6448))
-  - make jqLite('<iframe src="someurl">').contents() return iframe document, as in jQuery
+  - make `jqLite(<iframe src="someurl">').contents()` return iframe document, as in jQuery
   ([05fbed57](https://github.com/angular/angular.js/commit/05fbed5710b702c111c1425a9e241c40d13b0a54),
    [#6320](https://github.com/angular/angular.js/issues/6320), [#6323](https://github.com/angular/angular.js/issues/6323))
 - **numberFilter:** convert all non-finite/non-numbers/non-numeric strings to the empty string
@@ -9198,7 +9489,7 @@ with the `$route` service
   mocks now part of `angular-mocks.js` (commit f5d08963)
 
 ### Bug Fixes
-- <select> (one/multiple) could not chose from a list of objects (commit 347be5ae)
+- `<select>` (one/multiple) could not chose from a list of objects (commit 347be5ae)
 - null and other falsy values should not be rendered in the view (issue #242)
 
 ### Docs
