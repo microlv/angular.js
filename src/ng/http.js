@@ -253,7 +253,7 @@ function $HttpProvider() {
    *
    * - **`defaults.cache`** - {Object} - an object built with {@link ng.$cacheFactory `$cacheFactory`}
    * that will provide the cache for all requests who set their `cache` property to `true`.
-   * If you set the `default.cache = false` then only requests that specify their own custom
+   * If you set the `defaults.cache = false` then only requests that specify their own custom
    * cache object will be cached. See {@link $http#caching $http Caching} for more information.
    *
    * - **`defaults.xsrfCookieName`** - {string} - Name of cookie containing the XSRF token.
@@ -786,7 +786,7 @@ function $HttpProvider() {
      *      XHR object. See [requests with credentials](https://developer.mozilla.org/docs/Web/HTTP/Access_control_CORS#Requests_with_credentials)
      *      for more information.
      *    - **responseType** - `{string}` - see
-     *      [requestType](https://developer.mozilla.org/en-US/docs/DOM/XMLHttpRequest#responseType).
+     *      [XMLHttpRequest.responseType](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest#xmlhttprequest-responsetype).
      *
      * @returns {HttpPromise} Returns a {@link ng.$q promise} object with the
      *   standard `then` method and two http specific methods: `success` and `error`. The `then`

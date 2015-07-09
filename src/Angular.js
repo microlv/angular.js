@@ -352,8 +352,12 @@ function baseExtend(dst, objs, deep) {
       var src = obj[key];
 
       if (deep && isObject(src)) {
-        if (!isObject(dst[key])) dst[key] = isArray(src) ? [] : {};
-        baseExtend(dst[key], [src], true);
+        if (isDate(src)) {
+          dst[key] = new Date(src.valueOf());
+        } else {
+          if (!isObject(dst[key])) dst[key] = isArray(src) ? [] : {};
+          baseExtend(dst[key], [src], true);
+        }
       } else {
         dst[key] = src;
       }
@@ -463,6 +467,11 @@ identity.$inject = [];
 
 
 function valueFn(value) {return function() {return value;};}
+
+function hasCustomToString(obj) {
+  return isFunction(obj.toString) && obj.toString !== Object.prototype.toString;
+}
+
 
 /**
  * @ngdoc function
