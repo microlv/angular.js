@@ -19,18 +19,99 @@ var $$AnimationProvider = ['$animateProvider', function($animateProvider) {
     return element.data(RUNNER_STORAGE_KEY);
   }
 
-  this.$get = ['$$jqLite', '$rootScope', '$injector', '$$AnimateRunner', '$$rAFScheduler',
-       function($$jqLite,   $rootScope,   $injector,   $$AnimateRunner,   $$rAFScheduler) {
+  this.$get = ['$$jqLite', '$rootScope', '$injector', '$$AnimateRunner', '$$HashMap', '$$forceReflow',
+       function($$jqLite,   $rootScope,   $injector,   $$AnimateRunner,   $$HashMap,   $$forceReflow) {
 
     var animationQueue = [];
     var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
 
-    var totalPendingClassBasedAnimations = 0;
-    var totalActiveClassBasedAnimations = 0;
-    var classBasedAnimationsQueue = [];
+    function sortAnimations(animations) {
+      var tree = { children: [] };
+      var i, lookup = new $$HashMap();
+
+      // this is done first beforehand so that the hashmap
+      // is filled with a list of the elements that will be animated
+      for (i = 0; i < animations.length; i++) {
+        var animation = animations[i];
+        lookup.put(animation.domNode, animations[i] = {
+          domNode: animation.domNode,
+          fn: animation.fn,
+          children: []
+        });
+      }
+
+      for (i = 0; i < animations.length; i++) {
+        processNode(animations[i]);
+      }
+
+      return flatten(tree);
+
+      function processNode(entry) {
+        if (entry.processed) return entry;
+        entry.processed = true;
+
+        var elementNode = entry.domNode;
+        var parentNode = elementNode.parentNode;
+        lookup.put(elementNode, entry);
+
+        var parentEntry;
+        while (parentNode) {
+          parentEntry = lookup.get(parentNode);
+          if (parentEntry) {
+            if (!parentEntry.processed) {
+              parentEntry = processNode(parentEntry);
+            }
+            break;
+          }
+          parentNode = parentNode.parentNode;
+        }
+
+        (parentEntry || tree).children.push(entry);
+        return entry;
+      }
+
+      function flatten(tree) {
+        var result = [];
+        var queue = [];
+        var i;
+
+        for (i = 0; i < tree.children.length; i++) {
+          queue.push(tree.children[i]);
+        }
+
+        var remainingLevelEntries = queue.length;
+        var nextLevelEntries = 0;
+        var row = [];
+
+        for (i = 0; i < queue.length; i++) {
+          var entry = queue[i];
+          if (remainingLevelEntries <= 0) {
+            remainingLevelEntries = nextLevelEntries;
+            nextLevelEntries = 0;
+            result = result.concat(row);
+            row = [];
+          }
+          row.push({
+            fn: entry.fn,
+            terminal: entry.children.length === 0
+          });
+          entry.children.forEach(function(childEntry) {
+            nextLevelEntries++;
+            queue.push(childEntry);
+          });
+          remainingLevelEntries--;
+        }
+
+        if (row.length) {
+          result = result.concat(row);
+        }
+
+        return result;
+      }
+    }
 
     // TODO(matsko): document the signature in a better way
-    return function(element, event, options) {
+    return function(element, event, options, onBeforeClassesAppliedCb) {
       options = prepareAnimationOptions(options);
       var isStructural = ['enter', 'move', 'leave'].indexOf(event) >= 0;
 
@@ -57,19 +138,12 @@ var $$AnimationProvider = ['$animateProvider', function($animateProvider) {
         options.tempClasses = null;
       }
 
-      var classBasedIndex;
-      if (!isStructural) {
-        classBasedIndex = totalPendingClassBasedAnimations;
-        totalPendingClassBasedAnimations += 1;
-      }
-
       animationQueue.push({
         // this data is used by the postDigest code and passed into
         // the driver step function
         element: element,
         classes: classes,
         event: event,
-        classBasedIndex: classBasedIndex,
         structural: isStructural,
         options: options,
         beforeStart: beforeStart,
@@ -84,77 +158,73 @@ var $$AnimationProvider = ['$animateProvider', function($animateProvider) {
       if (animationQueue.length > 1) return runner;
 
       $rootScope.$$postDigest(function() {
-        totalActiveClassBasedAnimations = totalPendingClassBasedAnimations;
-        totalPendingClassBasedAnimations = 0;
-        classBasedAnimationsQueue.length = 0;
-
         var animations = [];
         forEach(animationQueue, function(entry) {
           // the element was destroyed early on which removed the runner
           // form its storage. This means we can't animate this element
           // at all and it already has been closed due to destruction.
-          if (getRunner(entry.element)) {
+          var elm = entry.element;
+          if (getRunner(elm) && getDomNode(elm).parentNode) {
             animations.push(entry);
+          } else {
+            entry.close();
           }
         });
 
         // now any future animations will be in another postDigest
         animationQueue.length = 0;
 
-        forEach(groupAnimations(animations), function(animationEntry) {
-          if (animationEntry.structural) {
-            triggerAnimationStart();
-          } else {
-            classBasedAnimationsQueue.push({
-              node: getDomNode(animationEntry.element),
-              fn: triggerAnimationStart
-            });
+        var groupedAnimations = groupAnimations(animations);
+        var toBeSortedAnimations = [];
 
-            if (animationEntry.classBasedIndex === totalActiveClassBasedAnimations - 1) {
-              // we need to sort each of the animations in order of parent to child
-              // relationships. This ensures that the child classes are applied at the
-              // right time.
-              classBasedAnimationsQueue = classBasedAnimationsQueue.sort(function(a,b) {
-                return b.node.contains(a.node);
-              }).map(function(entry) {
-                return entry.fn;
-              });
+        forEach(groupedAnimations, function(animationEntry) {
+          toBeSortedAnimations.push({
+            domNode: getDomNode(animationEntry.from ? animationEntry.from.element : animationEntry.element),
+            fn: function triggerAnimationStart() {
+              // it's important that we apply the `ng-animate` CSS class and the
+              // temporary classes before we do any driver invoking since these
+              // CSS classes may be required for proper CSS detection.
+              animationEntry.beforeStart();
 
-              $$rAFScheduler(classBasedAnimationsQueue);
-            }
-          }
+              var startAnimationFn, closeFn = animationEntry.close;
 
-          function triggerAnimationStart() {
-            // it's important that we apply the `ng-animate` CSS class and the
-            // temporary classes before we do any driver invoking since these
-            // CSS classes may be required for proper CSS detection.
-            animationEntry.beforeStart();
+              // in the event that the element was removed before the digest runs or
+              // during the RAF sequencing then we should not trigger the animation.
+              var targetElement = animationEntry.anchors
+                  ? (animationEntry.from.element || animationEntry.to.element)
+                  : animationEntry.element;
 
-            var startAnimationFn, closeFn = animationEntry.close;
+              if (getRunner(targetElement)) {
+                var operation = invokeFirstDriver(animationEntry, onBeforeClassesAppliedCb);
+                if (operation) {
+                  startAnimationFn = operation.start;
+                }
+              }
 
-            // in the event that the element was removed before the digest runs or
-            // during the RAF sequencing then we should not trigger the animation.
-            var targetElement = animationEntry.anchors
-                ? (animationEntry.from.element || animationEntry.to.element)
-                : animationEntry.element;
-
-            if (getRunner(targetElement)) {
-              var operation = invokeFirstDriver(animationEntry);
-              if (operation) {
-                startAnimationFn = operation.start;
+              if (!startAnimationFn) {
+                closeFn();
+              } else {
+                var animationRunner = startAnimationFn();
+                animationRunner.done(function(status) {
+                  closeFn(!status);
+                });
+                updateAnimationRunners(animationEntry, animationRunner);
               }
             }
+          });
+        });
 
-            if (!startAnimationFn) {
-              closeFn();
-            } else {
-              var animationRunner = startAnimationFn();
-              animationRunner.done(function(status) {
-                closeFn(!status);
-              });
-              updateAnimationRunners(animationEntry, animationRunner);
-            }
+        // we need to sort each of the animations in order of parent to child
+        // relationships. This ensures that the child classes are applied at the
+        // right time.
+        var anim = sortAnimations(toBeSortedAnimations);
+        var finalLevel = anim.length - 1;
+
+        forEach(anim, function(entry) {
+          if (!entry.terminal) {
+            $$forceReflow();
           }
+          entry.fn();
         });
       });
 
@@ -225,7 +295,7 @@ var $$AnimationProvider = ['$animateProvider', function($animateProvider) {
           var lookupKey = from.animationID.toString();
           if (!anchorGroups[lookupKey]) {
             var group = anchorGroups[lookupKey] = {
-              structural: true,
+              // TODO(matsko): double-check this code
               beforeStart: function() {
                 fromAnimation.beforeStart();
                 toAnimation.beforeStart();
@@ -279,7 +349,7 @@ var $$AnimationProvider = ['$animateProvider', function($animateProvider) {
         return matches.join(' ');
       }
 
-      function invokeFirstDriver(animationDetails) {
+      function invokeFirstDriver(animationDetails, onBeforeClassesAppliedCb) {
         // we loop in reverse order since the more general drivers (like CSS and JS)
         // may attempt more elements, but custom drivers are more particular
         for (var i = drivers.length - 1; i >= 0; i--) {
@@ -287,7 +357,7 @@ var $$AnimationProvider = ['$animateProvider', function($animateProvider) {
           if (!$injector.has(driverName)) continue; // TODO(matsko): remove this check
 
           var factory = $injector.get(driverName);
-          var driver = factory(animationDetails);
+          var driver = factory(animationDetails, onBeforeClassesAppliedCb);
           if (driver) {
             return driver;
           }

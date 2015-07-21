@@ -755,20 +755,23 @@ angular.mock.animate = angular.module('ngAnimateMock', ['ng'])
 
   .config(['$provide', function($provide) {
 
-    var reflowQueue = [];
-    $provide.value('$$animateReflow', function(fn) {
-      var index = reflowQueue.length;
-      reflowQueue.push(fn);
-      return function cancel() {
-        reflowQueue.splice(index, 1);
-      };
+    $provide.factory('$$forceReflow', function() {
+      function reflowFn() {
+        reflowFn.totalReflows++;
+      }
+      reflowFn.totalReflows = 0;
+      return reflowFn;
     });
 
-    $provide.decorator('$animate', ['$delegate', '$timeout', '$browser', '$$rAF',
-                            function($delegate,   $timeout,   $browser,   $$rAF) {
+    $provide.decorator('$animate', ['$delegate', '$timeout', '$browser', '$$rAF', '$$forceReflow',
+                            function($delegate,   $timeout,   $browser,   $$rAF,   $$forceReflow) {
+
       var animate = {
         queue: [],
         cancel: $delegate.cancel,
+        get reflows() {
+          return $$forceReflow.totalReflows;
+        },
         enabled: $delegate.enabled,
         triggerCallbackEvents: function() {
           $$rAF.flush();
@@ -779,12 +782,6 @@ angular.mock.animate = angular.module('ngAnimateMock', ['ng'])
         triggerCallbacks: function() {
           this.triggerCallbackEvents();
           this.triggerCallbackPromise();
-        },
-        triggerReflow: function() {
-          angular.forEach(reflowQueue, function(fn) {
-            fn();
-          });
-          reflowQueue = [];
         }
       };
 

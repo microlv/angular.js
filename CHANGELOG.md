@@ -1,3 +1,20 @@
+<a name="1.4.3"></a>
+# 1.4.3 foam-acceleration (2015-07-15)
+
+
+## Bug Fixes
+
+- **$animateCss:** ensure animations execute if only a keyframeStyle is provided
+  ([97d79eec](https://github.com/angular/angular.js/commit/97d79eec80092f5fae3336c23aa881a72436de55),
+   [#12124](https://github.com/angular/angular.js/issues/12124), [#12340](https://github.com/angular/angular.js/issues/12340))
+- **loader:** define isFunction
+  ([9ea52d81](https://github.com/angular/angular.js/commit/9ea52d818bcd2fb3ea8ccc85bf47f9fd5af68843))
+- **ngAnimate:** ensure that orphaned elements do not throw errors when animated
+  ([e4aeae0c](https://github.com/angular/angular.js/commit/e4aeae0c7303b94135e6df20e6c5e25f2aa0f586),
+   [#11975](https://github.com/angular/angular.js/issues/11975), [#12338](https://github.com/angular/angular.js/issues/12338))
+
+
+
 <a name="1.4.2"></a>
 # 1.4.2 nebular-readjustment (2015-07-06)
 

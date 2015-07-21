@@ -2,8 +2,8 @@
 
 /* global angularAnimateModule: true,
 
+   $$BodyProvider,
    $$rAFMutexFactory,
-   $$rAFSchedulerFactory,
    $$AnimateChildrenDirective,
    $$AnimateRunnerFactory,
    $$AnimateQueueProvider,
@@ -387,6 +387,7 @@
  *     enter: function(element, doneFn) {
  *       var runner = $animateCss(element, {
  *         event: 'enter',
+ *         structural: true,
  *         addClass: 'maroon-setting',
  *         from: { height:0 },
  *         to: { height: 200 }
@@ -740,10 +741,11 @@
  * Click here {@link ng.$animate $animate to learn more about animations with `$animate`}.
  */
 angular.module('ngAnimate', [])
+  .provider('$$body', $$BodyProvider)
+
   .directive('ngAnimateChildren', $$AnimateChildrenDirective)
 
   .factory('$$rAFMutex', $$rAFMutexFactory)
-  .factory('$$rAFScheduler', $$rAFSchedulerFactory)
 
   .factory('$$AnimateRunner', $$AnimateRunnerFactory)
 
