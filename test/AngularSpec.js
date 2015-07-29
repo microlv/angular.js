@@ -570,6 +570,17 @@ describe('angular', function() {
       expect(isDate(dst.date)).toBeTruthy();
       expect(dst.date.valueOf()).toEqual(src.date.valueOf());
     });
+
+    it('should copy regexp by value', function() {
+      var src = { regexp: /blah/ };
+      var dst = {};
+
+      merge(dst, src);
+
+      expect(dst.regexp).not.toBe(src.regexp);
+      expect(isRegExp(dst.regexp)).toBe(true);
+      expect(dst.regexp.toString()).toBe(src.regexp.toString());
+    });
   });
 
 
@@ -981,6 +992,12 @@ describe('angular', function() {
     it('should ignore properties higher in the prototype chain', function() {
       expect(parseKeyValue('toString=123')).toEqual({
         'toString': '123'
+      });
+    });
+
+    it('should ignore badly escaped = characters', function() {
+      expect(parseKeyValue('test=a=b')).toEqual({
+          'test': 'a=b'
       });
     });
   });
