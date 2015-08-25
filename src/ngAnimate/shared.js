@@ -69,7 +69,7 @@ var TRANSITION_DURATION_PROP = TRANSITION_PROP + DURATION_KEY;
 
 var isPromiseLike = function(p) {
   return p && p.then ? true : false;
-}
+};
 
 function assertArg(arg, name, reason) {
   if (!arg) {
@@ -225,7 +225,15 @@ function mergeAnimationOptions(element, target, newOptions) {
     delete newOptions.preparationClasses;
   }
 
+  // noop is basically when there is no callback; otherwise something has been set
+  var realDomOperation = target.domOperation !== noop ? target.domOperation : null;
+
   extend(target, newOptions);
+
+  // TODO(matsko or sreeramu): proper fix is to maintain all animation callback in array and call at last,but now only leave has the callback so no issue with this.
+  if (realDomOperation) {
+    target.domOperation = realDomOperation;
+  }
 
   if (classes.addClass) {
     target.addClass = classes.addClass;

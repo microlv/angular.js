@@ -35,6 +35,12 @@ describe('injector', function() {
   });
 
 
+  it('should check its modulesToLoad argument', function() {
+    expect(function() { angular.injector('test'); })
+        .toThrowMinErr('ng', 'areq');
+  });
+
+
   it('should resolve dependency graph and instantiate all services just once', function() {
     var log = [];
 
@@ -235,6 +241,17 @@ describe('injector', function() {
         annotate({});
       }).toThrow();
     });
+
+
+    // Only Chrome and Firefox support this syntax.
+    if (/chrome|firefox/i.test(navigator.userAgent)) {
+      it('should be possible to annotate functions that are declared using ES6 syntax', function() {
+        /*jshint -W061 */
+        // The function is generated using `eval` as just having the ES6 syntax can break some browsers.
+        expect(annotate(eval('({ fn(x) { return; } })').fn)).toEqual(['x']);
+        /*jshint +W061 */
+      });
+    }
 
 
     it('should publish annotate API', function() {

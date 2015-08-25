@@ -3,6 +3,7 @@
 describe('ngAnimate integration tests', function() {
 
   beforeEach(module('ngAnimate'));
+  beforeEach(module('ngAnimateMock'));
 
   var element, html, ss;
   beforeEach(module(function() {
@@ -30,7 +31,7 @@ describe('ngAnimate integration tests', function() {
     they('should render an $prop animation',
       ['enter', 'leave', 'move', 'addClass', 'removeClass', 'setClass'], function(event) {
 
-      inject(function($animate, $compile, $rootScope, $rootElement, $$rAF) {
+      inject(function($animate, $compile, $rootScope, $rootElement) {
         element = jqLite('<div class="animate-me"></div>');
         $compile(element)($rootScope);
 
@@ -97,10 +98,11 @@ describe('ngAnimate integration tests', function() {
         });
 
         expect(element).toHaveClass(setupClass);
-        $$rAF.flush();
+        $animate.flush();
         expect(element).toHaveClass(activeClass);
 
         browserTrigger(element, 'transitionend', { timeStamp: Date.now(), elapsedTime: 2 });
+        $animate.flush();
 
         expect(element).not.toHaveClass(setupClass);
         expect(element).not.toHaveClass(activeClass);
@@ -112,7 +114,7 @@ describe('ngAnimate integration tests', function() {
     });
 
     it('should not throw an error if the element is orphaned before the CSS animation starts',
-      inject(function($rootScope, $rootElement, $animate, $$rAF) {
+      inject(function($rootScope, $rootElement, $animate) {
 
       ss.addRule('.animate-me', 'transition:2s linear all;');
 
@@ -127,19 +129,19 @@ describe('ngAnimate integration tests', function() {
       $rootScope.$digest();
 
       // this will run the first class-based animation
-      $$rAF.flush();
+      $animate.flush();
 
       element.remove();
 
       expect(function() {
-        $$rAF.flush();
+        $animate.flush();
       }).not.toThrow();
 
       dealoc(element);
     }));
 
     it('should always synchronously add css classes in order for child animations to animate properly',
-      inject(function($animate, $compile, $rootScope, $rootElement, $$rAF, $document) {
+      inject(function($animate, $compile, $rootScope, $rootElement, $document) {
 
       ss.addRule('.animations-enabled .animate-me.ng-enter', 'transition:2s linear all;');
 
@@ -160,18 +162,19 @@ describe('ngAnimate integration tests', function() {
       expect(element).toHaveClass('animations-enabled');
       expect(child).toHaveClass('ng-enter');
 
-      $$rAF.flush();
+      $animate.flush();
 
       expect(child).toHaveClass('ng-enter-active');
 
       browserTrigger(child, 'transitionend', { timeStamp: Date.now(), elapsedTime: 2 });
+      $animate.flush();
 
       expect(child).not.toHaveClass('ng-enter-active');
       expect(child).not.toHaveClass('ng-enter');
     }));
 
     it('should synchronously add/remove ng-class expressions in time for other animations to run on the same element',
-      inject(function($animate, $compile, $rootScope, $rootElement, $$rAF, $document) {
+      inject(function($animate, $compile, $rootScope, $rootElement, $document) {
 
       ss.addRule('.animate-me.ng-enter.on', 'transition:2s linear all;');
 
@@ -184,7 +187,7 @@ describe('ngAnimate integration tests', function() {
 
       $rootScope.exp = true;
       $rootScope.$digest();
-      $$rAF.flush();
+      $animate.flush();
 
       var child = element.find('div');
 
@@ -203,18 +206,19 @@ describe('ngAnimate integration tests', function() {
       expect(child).toHaveClass('on');
       expect(child).toHaveClass('ng-enter');
 
-      $$rAF.flush();
+      $animate.flush();
 
       expect(child).toHaveClass('ng-enter-active');
 
       browserTrigger(child, 'transitionend', { timeStamp: Date.now(), elapsedTime: 2 });
+      $animate.flush();
 
       expect(child).not.toHaveClass('ng-enter-active');
       expect(child).not.toHaveClass('ng-enter');
     }));
 
     it('should animate ng-class and a structural animation in parallel on the same element',
-      inject(function($animate, $compile, $rootScope, $rootElement, $$rAF, $document) {
+      inject(function($animate, $compile, $rootScope, $rootElement, $document) {
 
       ss.addRule('.animate-me.ng-enter', 'transition:2s linear all;');
       ss.addRule('.animate-me.expand', 'transition:5s linear all; font-size:200px;');
@@ -236,12 +240,13 @@ describe('ngAnimate integration tests', function() {
       expect(child).toHaveClass('expand-add');
       expect(child).toHaveClass('expand');
 
-      $$rAF.flush();
+      $animate.flush();
 
       expect(child).toHaveClass('ng-enter-active');
       expect(child).toHaveClass('expand-add-active');
 
       browserTrigger(child, 'transitionend', { timeStamp: Date.now(), elapsedTime: 2 });
+      $animate.flush();
 
       expect(child).not.toHaveClass('ng-enter-active');
       expect(child).not.toHaveClass('ng-enter');
@@ -249,9 +254,9 @@ describe('ngAnimate integration tests', function() {
       expect(child).not.toHaveClass('expand-add');
     }));
 
-    it('should only issue a reflow for each parent CSS class change that contains ready-to-fire child animations', function() {
+    it('should issue a reflow for each element animation on all DOM levels', function() {
       module('ngAnimateMock');
-      inject(function($animate, $compile, $rootScope, $rootElement, $$rAF, $document) {
+      inject(function($animate, $compile, $rootScope, $rootElement, $document) {
         element = jqLite(
           '<div ng-class="{parent:exp}">' +
             '<div ng-class="{parent2:exp}">' +
@@ -273,13 +278,15 @@ describe('ngAnimate integration tests', function() {
         $rootScope.items = [1,2,3,4,5,6,7,8,9,10];
 
         $rootScope.$digest();
-        expect($animate.reflows).toBe(2);
+
+        // 2 parents + 10 items = 12
+        expect($animate.reflows).toBe(12);
       });
     });
 
-    it('should issue a reflow for each parent class-based animation that contains active child animations', function() {
+    it('should issue a reflow for each element and also its children', function() {
       module('ngAnimateMock');
-      inject(function($animate, $compile, $rootScope, $rootElement, $$rAF, $document) {
+      inject(function($animate, $compile, $rootScope, $rootElement, $document) {
         element = jqLite(
           '<div ng-class="{one:exp}">' +
              '<div ng-if="exp"></div>' +
@@ -302,43 +309,15 @@ describe('ngAnimate integration tests', function() {
 
         $rootScope.exp = true;
         $rootScope.$digest();
-        expect($animate.reflows).toBe(2);
-      });
-    });
 
-    it('should only issue one reflow for class-based animations if none of them have children with queued animations', function() {
-      module('ngAnimateMock');
-      inject(function($animate, $compile, $rootScope, $rootElement, $$rAF, $document) {
-        element = jqLite(
-          '<div ng-class="{one:exp}">' +
-             '<div ng-if="exp2"></div>' +
-          '</div>' +
-          '<div ng-class="{two:exp}">' +
-             '<div ng-if="exp2"></div>' +
-          '</div>' +
-          '<div ng-class="{three:exp}"></div>'
-        );
-
-        $rootElement.append(element);
-        jqLite($document[0].body).append($rootElement);
-
-        $compile(element)($rootScope);
-        $rootScope.$digest();
-        expect($animate.reflows).toBe(0);
-
-        $rootScope.exp = true;
-        $rootScope.$digest();
-        expect($animate.reflows).toBe(1);
-
-        $rootScope.exp2 = true;
-        $rootScope.$digest();
-        expect($animate.reflows).toBe(2);
+        // there is one element's expression in there that is false
+        expect($animate.reflows).toBe(6);
       });
     });
 
     it('should always issue atleast one reflow incase there are no parent class-based animations', function() {
       module('ngAnimateMock');
-      inject(function($animate, $compile, $rootScope, $rootElement, $$rAF, $document) {
+      inject(function($animate, $compile, $rootScope, $rootElement, $document) {
         element = jqLite(
           '<div ng-repeat="item in items" ng-class="{someAnimation:exp}">' +
             '{{ item }}' +
@@ -356,7 +335,7 @@ describe('ngAnimate integration tests', function() {
         $rootScope.items = [1,2,3,4,5,6,7,8,9,10];
         $rootScope.$digest();
 
-        expect($animate.reflows).toBe(1);
+        expect($animate.reflows).toBe(10);
       });
     });
   });
@@ -381,7 +360,7 @@ describe('ngAnimate integration tests', function() {
         });
       });
 
-      inject(function($animate, $compile, $rootScope, $rootElement, $$rAF) {
+      inject(function($animate, $compile, $rootScope, $rootElement) {
         element = jqLite('<div class="animate-me"></div>');
         $compile(element)($rootScope);
 
@@ -433,7 +412,7 @@ describe('ngAnimate integration tests', function() {
         expect(isFunction(endAnimation)).toBe(true);
 
         endAnimation();
-        $$rAF.flush();
+        $animate.flush();
         expect(animateCompleteCallbackFired).toBe(true);
 
         $rootScope.$digest();
